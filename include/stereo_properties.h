@@ -30,12 +30,16 @@ public:
     int bucket_width;               //!> Bucket width.
     int bucket_height;              //!> Bucket height.
     int bucket_max;                 //!> Maximum number the features per bucket.
+    double features_max_value;
+    double N_levels;
 
     // Default values
     static const int            DEFAULT_NUM_HYPERPLANES = 4;
     static const int            DEFAULT_BUCKET_WIDTH = 30;
     static const int            DEFAULT_BUCKET_HEIGHT = 30;
     static const int            DEFAULT_BUCKET_MAX = 10;
+    static const double            DEFAULT_F_MAX_VALUE = 255.0;
+    static const double            DEFAULT_N_LEVELS = 128.0;
   };
 
   // Set the parameter struct
@@ -66,6 +70,8 @@ public:
   vector<uint> getHash1();
   vector<double> getHash2();
   vector<double> getHash3();
+  vector<double> getHash4();
+  vector<uint> getHash5();
 
   // Computes the hash for the left image
   void computeHash();
@@ -87,9 +93,11 @@ private:
   Mat img_;                             //!> Stores the image
   vector<KeyPoint> kp_;                 //!> Unfiltered keypoints of the images.
   Mat desc_;                            //!> Unfiltered descriptors of the images.
-  vector<uint> hash1_;                  //!> Hash vector of the image
-  vector<double> hash2_;                //!> Hash vector of the image
-  vector<double> hash3_;                //!> Hash vector of the image
+  vector<uint> hash1_;                  //!> Hash vector of the image --> number of features sharing the same bin
+  vector<double> hash2_;                //!> Hash vector of the image --> phase of the bin centroid with respect to the global centroid
+  vector<double> hash3_;                //!> Hash vector of the image --> module of the bin centroid with respect to the global centroid
+  vector<double> hash4_;  
+  vector<uint> hash5_;              //!> Hash vector of the image --> dispersion of the features sharing a bin
   vector<string> comb_;                 //!> Table of possible hash combinations
   vector<float> centroid_;              //!> Saves the descriptor centroid  
   vector< vector<float> > H_;           //!> Hash hyperplanes

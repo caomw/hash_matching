@@ -15,8 +15,14 @@ class HashMatchingBase
 
 public:
 	// Constructor
-  HashMatchingBase(ros::NodeHandle nh, ros::NodeHandle nhp);
-
+	HashMatchingBase(ros::NodeHandle nh, ros::NodeHandle nhp);
+	struct trio
+	{
+		double hashmatching;
+		int featurematchings;
+		string image;
+		/* data */
+	};
 protected:
 
 	// Node handlers
@@ -26,6 +32,7 @@ protected:
 private:
 	double match(vector<uint> hash_1, vector<uint> hash_2);
 	double match(vector<double> hash_1, vector<double> hash_2);
+	
 };
 
 } // namespace

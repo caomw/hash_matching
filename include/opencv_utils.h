@@ -7,6 +7,7 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
 #include <image_geometry/stereo_camera_model.h>
+#include <hash_matching_base.h>
 
 using namespace std;
 using namespace cv;
@@ -182,11 +183,15 @@ public:
     * \param pair 1
     * \param pair 2
     */
-  static bool sortByDistance(const pair<double,string> d1, const pair<double,string> d2)
+  static bool sortpairByDistance(const pair<double,string> d1, const pair<double,string> d2)
   {
     return (d1.first < d2.first);
   }
 
+  static bool sorttrioByDistance(const hash_matching::HashMatchingBase::trio d1, const hash_matching::HashMatchingBase::trio d2)
+  {
+    return (d1.hashmatching < d2.hashmatching);
+  }
   /** \brief Sort 2 descriptors matchings by distance
     * @return true if vector 1 is smaller than vector 2
     * \param descriptor matching 1
