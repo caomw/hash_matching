@@ -145,9 +145,10 @@ hash_matching::HashMatchingBase::HashMatchingBase(
       // module of the distance between bin centroid and global centroid
   //    ROS_INFO_STREAM(it->path().filename().string() << "has4");
       double hash_matching4 = match(ref_prop.getHash4(), cur_prop.getHash4());
-      double hash_matching5 = match(ref_prop.getHash5(), cur_prop.getHash5());
-
       // dispersion (variance) of features with the same bin with respect their centroid.
+      double hash_matching5 = match(ref_prop.getHash5(), cur_prop.getHash5());
+      // histogram of discretized feature components. 
+      
      // double matching = log10(hash_matching1*hash_matching2*hash_matching3*hash_matching4*hash_matching5); // module of the 4 component hash
       //double matching = log10(hash_matching1*hash_matching2*hash_matching3); // module of the 4 component hash
       
@@ -161,7 +162,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
       double a2=0.05;
       double a3=0.05;
       double a4=0.01;
-      double a5=1.75;
+      double a5=1.3;
 
       double matching = ((hash_matching1*a1)+(hash_matching2*a2)+(hash_matching3*a3)+(hash_matching4*a4)+(hash_matching5*a5));
 
