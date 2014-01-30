@@ -81,8 +81,8 @@ void hash_matching::Hash::saveToFile(Mat desc)
   computeHyperplanes(sub_desc, centroid, H, delta);
 
   // Write to file
-  string hyperplanes = "/home/plnegre/Workspace/ROS_fuerte/sandbox/hash_matching/data/hyperplanes.txt";
-  string descriptors = "/home/plnegre/Workspace/ROS_fuerte/sandbox/hash_matching/data/descriptors.txt";
+  string hyperplanes = "/home/plnegre/Workspace/ROS_hydro/src/sandbox/hash_matching/data/hyperplanes.txt";
+  string descriptors = "/home/plnegre/Workspace/ROS_hydro/src/sandbox/hash_matching/data/descriptors.txt";
   fstream f_hp(hyperplanes.c_str(), ios::out | ios::trunc);
   fstream f_desc(descriptors.c_str(), ios::out | ios::trunc);
   f_hp << setprecision(4) << 
