@@ -186,6 +186,10 @@ public:
   {
     return (d1.first < d2.first);
   }
+  static bool sortByDistance2(const pair<double,uint> d1, const pair<double,uint> d2)
+  {
+    return (d1.first > d2.first);
+  }
 
   /** \brief Sort 2 descriptors matchings by distance
     * @return true if vector 1 is smaller than vector 2

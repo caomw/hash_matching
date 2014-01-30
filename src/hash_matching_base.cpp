@@ -35,16 +35,20 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   // Define image properties
   StereoProperties ref_prop;
   StereoProperties cur_prop;
+  Hash hash_obj;
 
   // Setup the parameters
   hash_matching::StereoProperties::Params image_params;
   image_params.desc_type = desc_type;
-  image_params.num_hyperplanes = num_hyperplanes;
   image_params.bucket_width = bucket_width;
   image_params.bucket_height = bucket_height;
   image_params.bucket_max = bucket_max;
   ref_prop.setParams(image_params);
   cur_prop.setParams(image_params);
+
+  hash_matching::Hash::Params hash_params;
+  hash_params.num_hyperplanes = num_hyperplanes;
+  hash_obj.setParams(hash_params);
 
   // Sanity checks
   if (!boost::filesystem::exists(ref_path) || ref_path == "")
@@ -66,10 +70,14 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   // Read the template image and extract kp and descriptors
   Mat img_temp = imread(ref_path, CV_LOAD_IMAGE_COLOR);
   ref_prop.setImage(img_temp);
-  ref_prop.computeHyperplanes();
-  ref_prop.computeHash();
   ROS_INFO_STREAM("Reference Keypoints Size: " << ref_prop.getKp().size());
-  
+
+  // Compute the hash
+  vector<double> ref_hash;
+  hash_obj.initialize(ref_prop.getDesc());
+  /*
+  ref_hash = hash_obj.computeHash(ref_prop.getDesc(), ref_prop.getKp());
+
   // Loop directory images
   fs::directory_iterator it(img_dir);
   fs::directory_iterator end;
@@ -83,31 +91,28 @@ hash_matching::HashMatchingBase::HashMatchingBase(
       string path = img_dir + "/" + it->path().filename().string();
       Mat img_cur = imread(path, CV_LOAD_IMAGE_COLOR);
       cur_prop.setImage(img_cur);
-      cur_prop.setHyperplanes(ref_prop.getCentroid(), ref_prop.getH(), ref_prop.getDelta());
 
-      // Crosscheck matchin
+      // Compute the hash
+      vector<double> cur_hash;
+      cur_hash = hash_obj.computeHash(cur_prop.getDesc(), cur_prop.getKp());
+
+      // Crosscheck matching
       vector<DMatch> matches;
       Mat match_mask;
       hash_matching::OpencvUtils::crossCheckThresholdMatching(ref_prop.getDesc(), 
                                                               cur_prop.getDesc(), 
                                                               desc_thresh, 
                                                               match_mask, matches);
-      // Compute hash
-      cur_prop.computeHash();
-
       // Compare hashes
-      double hash_matching1 = match(ref_prop.getHash1(), cur_prop.getHash1());
-      double hash_matching2 = match(ref_prop.getHash2(), cur_prop.getHash2());
-      double hash_matching3 = match(ref_prop.getHash3(), cur_prop.getHash3());
-      double matching = hash_matching1*hash_matching2*hash_matching3;
+      double matching = match(ref_hash, cur_hash);
 
       if (isfinite(matching))
       {
         // Log
         ROS_INFO_STREAM(it->path().filename().string() << " -> Hash: " <<
-          matching << " | Desc. Matches: " << (int)matches.size());
+          matching << "\t | Desc. Matches: " << (int)matches.size());
 
-        output_csv << matching << "," << matches.size() << endl; 
+        output_csv << matching << "," << matches.size() << endl;
 
         // Save hash into vector
         dists.push_back(make_pair(matching, it->path().filename().string()));
@@ -130,32 +135,29 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   // Show result
   for(int i=0; i<best_n; i++)
     ROS_INFO_STREAM("BEST MATCHING: " << dists[i].second << " (" << dists[i].first << ")");
-
-  ROS_INFO("FINISH!");
+  */
 }
 
-double hash_matching::HashMatchingBase::match(vector<uint> hash_1, vector<uint> hash_2)
-{
-  // Sanity check
-  ROS_ASSERT(hash_1.size() == hash_2.size());
-
-  double sum = 0.0;
-  for (uint i=0; i<hash_1.size(); i++)
-  {
-    sum += pow((double)hash_1[i] - (double)hash_2[i], 2.0);
-  }
-  return sqrt(sum);
-}
 double hash_matching::HashMatchingBase::match(vector<double> hash_1, vector<double> hash_2)
 {
-  // Sanity check
-  ROS_ASSERT(hash_1.size() == hash_2.size());
+  ROS_ASSERT(hash_1.size() == hash_2.size()); // Sanity check
 
+  // Get the maximum value of the vectors
+  vector<double> max_elements;
+  int max_1 = *std::max_element(hash_1.begin(), hash_1.end());
+  int max_2 = *std::max_element(hash_2.begin(), hash_2.end());
+  max_elements.push_back(max_1);
+  max_elements.push_back(max_2);
+  int max_val = *std::max_element(max_elements.begin(), max_elements.end());
+
+  // Compute the distance
   double sum = 0.0;
   for (uint i=0; i<hash_1.size(); i++)
   {
-    sum += pow((double)hash_1[i] - (double)hash_2[i], 2.0);
+    if (hash_1[i] == 0 || hash_2[i] == 0)
+      sum += pow(max_val, 2.0);
+    else
+      sum += pow(hash_1[i] - hash_2[i], 2.0);
   }
   return sqrt(sum);
 }
-

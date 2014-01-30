@@ -8,7 +8,7 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/hash_matching</url>
-
+  
   <depend package="roscpp"/>
   <depend package="tf"/>
   <depend package="opencv2" />

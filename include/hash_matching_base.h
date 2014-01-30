@@ -3,6 +3,7 @@
 
 #include <ros/ros.h>
 #include "opencv2/core/core.hpp"
+#include "hash.h"
 
 using namespace std;
 using namespace cv;
@@ -24,8 +25,8 @@ protected:
 	ros::NodeHandle nh_private_;
 
 private:
-	double match(vector<uint> hash_1, vector<uint> hash_2);
 	double match(vector<double> hash_1, vector<double> hash_2);
+	vector<double> computeHash(Hash hash_obj, Mat desc, vector<Hash>& hash_objs, hash_matching::Hash::Params hash_params);
 };
 
 } // namespace

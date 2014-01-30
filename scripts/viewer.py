@@ -27,6 +27,7 @@ if __name__ == "__main__":
   ax.set_xlabel("Hash")
   ax.set_ylabel("Descriptors Matchings")
   ax.plot(data[:,0], data[:,1], marker='o', ls='')
-  pylab.xlim(0, 1000)
+  #pylab.xlim(0, 500)
+  #pylab.ylim(0, 100)
 
   pylab.show()

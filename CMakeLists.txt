@@ -22,7 +22,8 @@ include_directories(${EIGEN_INCLUDE_DIRS})
 rosbuild_add_executable(hash_matching 
 						src/hash_matching_node.cpp
 						src/hash_matching_base.cpp
-						src/stereo_properties.cpp)
+						src/stereo_properties.cpp
+						src/hash.cpp)
 
 #link with libraries
 rosbuild_link_boost(hash_matching signals filesystem system)
