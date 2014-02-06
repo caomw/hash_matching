@@ -1,0 +1,24 @@
+<package>
+  <name>hash_matching</name>
+  <version>0.0.1</version>
+  <description>Image hash matching</description>
+  <author email="pl.negre@uib.cat">Pep Lluis Negre</author>
+  <maintainer email="pl.negre@uib.cat">Pep Lluis Negre</maintainer>
+  <license>BSD</license>
+  <url type="website">https://github.com/plnegre/hash_matching</url>
+  <url type="bugtracker">https://github.com/plnegre/hash_matching/issues</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>roscpp</build_depend>
+  <build_depend>tf</build_depend>
+  <build_depend>opencv2</build_depend>
+  <build_depend>cv_bridge</build_depend>
+  <build_depend>image_geometry</build_depend>
+
+  <run_depend>roscpp</run_depend>
+  <run_depend>tf</run_depend>
+  <run_depend>opencv2</run_depend>
+  <run_depend>cv_bridge</run_depend>
+  <run_depend>image_geometry</run_depend>
+</package>

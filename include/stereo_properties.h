@@ -4,6 +4,7 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv_utils.h"
+#include <Eigen/Eigen>
 
 using namespace std;
 using namespace cv;
@@ -75,6 +76,7 @@ public:
 
   // Computes the hash for the left image
   void computeHash();
+  vector<double> computeSVD(Mat desc, int dim); // computes the hash with singular values fbf 3/02/2014
 
 private:
 

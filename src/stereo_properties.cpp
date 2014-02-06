@@ -1,6 +1,7 @@
 #include "stereo_properties.h"
 #include "opencv_utils.h"
 #include <ros/ros.h>
+#include <opencv2/core/eigen.hpp>
 
 /** \brief Parameter constructor. Sets the parameter struct to default values.
   */
@@ -164,6 +165,32 @@ void hash_matching::StereoProperties::computeHyperplanes()
     delta_.push_back(f);
   }
 }
+
+// compute hash using the singular values
+vector<double> hash_matching::StereoProperties::computeSVD(Mat desc, int dim)
+{
+  // Convert the cv Mat to Eigen::Matrix3f
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> h;
+  cv2eigen(desc, h);
+
+  // Compute the SVD
+  Eigen::JacobiSVD<Eigen::MatrixXf> svd(h, Eigen::ComputeFullU | Eigen::ComputeFullV);
+
+  Eigen::Vector3f sgm = svd.singularValues();
+  Eigen::Matrix3f u = svd.matrixU ();
+  Eigen::Matrix3f v = svd.matrixV ();
+
+  //Eigen::Vector3f = 
+
+  // Get the first n elements
+  vector<double> r; 
+  for (int i=0; i<dim; i++)
+    r.push_back((double)sgm[i]);
+
+  return r;
+}
+
+
 
 /** \brief Computes the feature-based hash
  */

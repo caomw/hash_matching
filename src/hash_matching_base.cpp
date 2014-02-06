@@ -17,12 +17,13 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   // Load parameters
   string ref_path, img_dir, desc_type, files_path;
   double desc_thresh;
-  int num_hyperplanes, bucket_width, bucket_height, bucket_max, best_n, features_max_value, N_levels;
+  int eigen_dim, num_hyperplanes, bucket_width, bucket_height, bucket_max, best_n, features_max_value, N_levels;
   nh_private_.param("ref_path", ref_path, std::string(""));
   nh_private_.param("img_dir", img_dir, std::string(""));
   nh_private_.param("desc_type", desc_type, std::string("SIFT"));
   nh_private_.getParam("desc_thresh", desc_thresh);
   nh_private_.getParam("best_n", best_n);
+  nh_private_.getParam("eigen_dim", eigen_dim);
   nh_private_.getParam("num_hyperplanes", num_hyperplanes);
   nh_private_.getParam("bucket_width", bucket_width);
   nh_private_.getParam("bucket_height", bucket_height);
@@ -39,6 +40,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   // Define image properties
   StereoProperties ref_prop;
   StereoProperties cur_prop;
+  //Hash hash_obj;
 
   // Setup the parameters
   hash_matching::StereoProperties::Params image_params;
@@ -77,6 +79,11 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   // Read the template image and extract kp and descriptors
   Mat img_temp = imread(ref_path, CV_LOAD_IMAGE_COLOR);
   ref_prop.setImage(img_temp);
+  ROS_INFO_STREAM("Reference Keypoints Size: " << ref_prop.getKp().size());
+  
+  // Compute the hash based on the singular values. stored in a vector of floats the set of singular values
+  vector<double> ref_hash = ref_prop.computeSVD(ref_prop.getDesc(), eigen_dim);
+
   ref_prop.computeHyperplanes();
   ref_prop.computeHash(); // compute hashes of reference frame
   
@@ -105,6 +112,8 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   vector< trio > dists3;
   vector< trio > dists4;
   vector< trio > dists5;
+  vector< trio > dists6;
+  vector< trio > dists7;
 
   vec::const_iterator it(v.begin()); // define an iterator over v, starting at the 1st element. 
   // it is actually a pointer, so a reference to its methods needs a "->"
@@ -133,6 +142,10 @@ hash_matching::HashMatchingBase::HashMatchingBase(
                                                               match_mask, matches);
       // Compute current image hash
       cur_prop.computeHash();
+      // compute hash singular values
+      vector<double> cur_hash = cur_prop.computeSVD(cur_prop.getDesc(), eigen_dim);
+
+
       // Compare image hashes
    //   ROS_INFO_STREAM(it->path().filename().string() << "has1");
       double hash_matching1 = match(ref_prop.getHash1(), cur_prop.getHash1());
@@ -148,6 +161,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
       // dispersion (variance) of features with the same bin with respect their centroid.
       double hash_matching5 = match(ref_prop.getHash5(), cur_prop.getHash5());
       // histogram of discretized feature components. 
+      double hash_matching6 = match(ref_hash, cur_hash);
       
      // double matching = log10(hash_matching1*hash_matching2*hash_matching3*hash_matching4*hash_matching5); // module of the 4 component hash
       //double matching = log10(hash_matching1*hash_matching2*hash_matching3); // module of the 4 component hash
@@ -158,15 +172,16 @@ hash_matching::HashMatchingBase::HashMatchingBase(
       // double a4=0.01;
       // double a5=1.5;
 
-      double a1=0.05;
-      double a2=0.05;
-      double a3=0.05;
-      double a4=0.01;
-      double a5=1.3;
+      double a1=0.05; // features per bin
+      double a2=0.0; // angle of bin centroid  with respect global centroid
+      double a3=0.0; // module of bin centroid  with respect global centroid
+      double a4=0.05; // dispersion of features with respect bin centroid
+      double a5=2.3; // hystogram of discretized feature components 
+      double a6=2.3; // singular values
 
-      double matching = ((hash_matching1*a1)+(hash_matching2*a2)+(hash_matching3*a3)+(hash_matching4*a4)+(hash_matching5*a5));
+      double matching = ((hash_matching1*a1)+(hash_matching2*a2)+(hash_matching3*a3)+(hash_matching4*a4)+(hash_matching5*a5)+(hash_matching6*a6));
 
-      ROS_INFO_STREAM("hash matchings" << hash_matching1 << ";" << hash_matching2 << ";" << hash_matching3 << ";" << hash_matching4 << ";" << hash_matching5);
+     // ROS_INFO_STREAM("hash matchings" << hash_matching1 << ";" << hash_matching2 << ";" << hash_matching3 << ";" << hash_matching4 << ";" << hash_matching5);
       
       if (isfinite(matching))
       {
@@ -180,7 +195,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
         output_csv3 << hash_matching3 << "," << matches.size() << endl; 
         output_csv4 << hash_matching4 << "," << matches.size() << endl; 
         // Save hashes into vectors
-        trio trio1,trio2,trio3,trio4,trio5, trio6;
+        trio trio1,trio2,trio3,trio4,trio5, trio6, trio7;
         trio1.hashmatching=matching;
         trio1.featurematchings=(int)matches.size();
         trio1.image=it->filename().string();
@@ -205,12 +220,18 @@ hash_matching::HashMatchingBase::HashMatchingBase(
         trio6.featurematchings=(int)matches.size();
         trio6.image=it->filename().string();
 
+        trio7.hashmatching=hash_matching6;
+        trio7.featurematchings=(int)matches.size();
+        trio7.image=it->filename().string();
+
+
         dists.push_back(trio1);
         dists1.push_back(trio2);
         dists2.push_back(trio3);
         dists3.push_back(trio4);
         dists4.push_back(trio5);
         dists5.push_back(trio6);
+        dists6.push_back(trio7);
 
         // dists1.push_back(make_pair(hash_matching1, it->path().filename().string()));
         // dists2.push_back(make_pair(hash_matching2, it->path().filename().string()));
@@ -263,6 +284,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   sort(dists3.begin(), dists3.end(), hash_matching::OpencvUtils::sorttrioByDistance);
   sort(dists4.begin(), dists4.end(), hash_matching::OpencvUtils::sorttrioByDistance);
   sort(dists5.begin(), dists5.end(), hash_matching::OpencvUtils::sorttrioByDistance);
+  sort(dists6.begin(), dists6.end(), hash_matching::OpencvUtils::sorttrioByDistance);
   // Show results
   for(int i=0; i<best_n; i++)
   {
@@ -272,6 +294,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
     ROS_INFO_STREAM("BEST MATCHING 3: " << dists3[i].image << " (" << dists3[i].hashmatching << ")" << "(" << dists3[i].featurematchings << ")");
     ROS_INFO_STREAM("BEST MATCHING 4: " << dists4[i].image << " (" << dists4[i].hashmatching << ")" << "(" << dists4[i].featurematchings << ")");
     ROS_INFO_STREAM("BEST MATCHING 5: " << dists5[i].image << " (" << dists5[i].hashmatching << ")" << "(" << dists5[i].featurematchings << ")");
+    ROS_INFO_STREAM("BEST MATCHING 6: " << dists6[i].image << " (" << dists6[i].hashmatching << ")" << "(" << dists6[i].featurematchings << ")");
   }
   ROS_INFO("FINISH!");
 }
@@ -304,3 +327,4 @@ double hash_matching::HashMatchingBase::match(vector<double> hash_1, vector<doub
   }
   return sqrt(sum);
 }
+

@@ -1,28 +1,30 @@
-cmake_minimum_required(VERSION 2.4.6)
-include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
+cmake_minimum_required(VERSION 2.8.3)
+project(hash_matching)
+find_package(catkin REQUIRED COMPONENTS 
+	roscpp
+	tf
+	cv_bridge
+	image_geometry)
 
-# Set the build type.  Options are:
-#  Coverage       : w/ debug symbols, w/o optimization, w/ code-coverage
-#  Debug          : w/ debug symbols, w/o optimization
-#  Release        : w/o debug symbols, w/ optimization
-#  RelWithDebInfo : w/ debug symbols, w/ optimization
-#  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-#set(ROS_BUILD_TYPE RelWithDebInfo)
+# Dependencies - Boost:
+find_package(Boost REQUIRED COMPONENTS signals filesystem system)
+include_directories(${Boost_INCLUDE_DIRS})
 
-rosbuild_init()
+# Dependencies - Eigen:
+find_package(Eigen REQUIRED)
+include_directories(${Eigen_INCLUDE_DIRS})
 
-#set the default path for built executables to the "bin" directory
-set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
-#set the default path for built libraries to the "lib" directory
-set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+# Dependencies - OpenCV:
+find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
+link_directories(${OpenCV_LIBRARY_DIRS})
 
-include_directories(${EIGEN_INCLUDE_DIRS})
+catkin_package()
 
-#executables
-rosbuild_add_executable(hash_matching 
-						src/hash_matching_node.cpp
-						src/hash_matching_base.cpp
-						src/stereo_properties.cpp)
+include_directories(${catkin_INCLUDE_DIRS} include)
 
-#link with libraries
-rosbuild_link_boost(hash_matching signals filesystem system)
+add_executable(hash_matching 
+			   src/hash_matching_node.cpp
+			   src/hash_matching_base.cpp
+			   src/stereo_properties.cpp)
+target_link_libraries(hash_matching ${Boost_LIBRARIES} ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
