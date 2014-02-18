@@ -26,5 +26,6 @@ include_directories(${catkin_INCLUDE_DIRS} include)
 add_executable(hash_matching 
 			   src/hash_matching_node.cpp
 			   src/hash_matching_base.cpp
-			   src/stereo_properties.cpp)
+			   src/stereo_properties.cpp
+			   src/LSH_functions.cpp)
 target_link_libraries(hash_matching ${Boost_LIBRARIES} ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})

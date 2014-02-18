@@ -142,7 +142,7 @@ void hash_matching::StereoProperties::computeHyperplanes()
   // Generate 'd' random hyperplanes
   srand(101);
   H_.clear();
-  for (int i=0; i<d; i++)
+  for (int i=0; i<d; i++) // generate d hyperplanes and for each hyperplan we need num_colums coeficients
   {
     vector<float> h;
     for(int n=0; n<desc_.cols; n++)
@@ -179,17 +179,19 @@ vector<double> hash_matching::StereoProperties::computeSVD(Mat desc, int dim)
   Eigen::Vector3f sgm = svd.singularValues();
   Eigen::Matrix3f u = svd.matrixU ();
   Eigen::Matrix3f v = svd.matrixV ();
-
+  int numberofsingularvalues=desc.rows;
   //Eigen::Vector3f = 
-
-  // Get the first n elements
+  ROS_INFO_STREAM("Nbr of singular values" << numberofsingularvalues);
+  // Get all the singular values
   vector<double> r; 
-  for (int i=0; i<dim; i++)
+  for (int i=0; i<numberofsingularvalues; i++)
+  {
     r.push_back((double)sgm[i]);
-
+    //ROS_INFO_STREAM("singular values" << sgm[i]);
+    //ROS_INFO_STREAM("i" << i);
+  }
   return r;
 }
-
 
 
 /** \brief Computes the feature-based hash
@@ -200,6 +202,7 @@ void hash_matching::StereoProperties::computeHash()
   hash2_.clear();
   hash3_.clear();
   hash4_.clear();
+  hash5_.clear();
 
   // Set the number of hyperplanes
   int d = params_.num_hyperplanes;
@@ -234,7 +237,7 @@ void hash_matching::StereoProperties::computeHash()
       for(int n=0; n<desc_.cols; n++) // for each component of the descriptor
       {
         if (desc_.at<float>(m, n)>255 || desc_.at<float>(m, n) < 0)
-        ROS_INFO_STREAM("feature " << m << "=" << desc_.at<float>(m, n));
+        //ROS_INFO_STREAM("feature " << m << "=" << desc_.at<float>(m, n));
 
         v += (float)H_[i][n] * desc_.at<float>(m, n); // plane "i" column "n" (variable ieesim of the plane) 
         // * descriptor m column "n", we are applying the plane equation to the descriptor
