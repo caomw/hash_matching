@@ -10,6 +10,10 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Boost REQUIRED COMPONENTS signals filesystem system)
 include_directories(${Boost_INCLUDE_DIRS})
 
+# Dependencies - Eigen:
+find_package(Eigen REQUIRED)
+include_directories(${Eigen_INCLUDE_DIRS})
+
 # Dependencies - OpenCV:
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
@@ -24,4 +28,4 @@ add_executable(hash_matching
 			   src/hash_matching_base.cpp
 			   src/stereo_properties.cpp
 			   src/hash.cpp)
-target_link_libraries(hash_matching ${Boost_LIBRARIES} ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
+target_link_libraries(hash_matching ${Boost_LIBRARIES} ${Eigen_LIBRARIES} ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})

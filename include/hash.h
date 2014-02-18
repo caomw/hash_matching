@@ -4,6 +4,7 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv_utils.h"
+#include <Eigen/Eigen>
 
 using namespace std;
 using namespace cv;
@@ -38,10 +39,11 @@ public:
   inline Params params() const { return params_; }
 
   // Initialize class
-  void initialize(Mat desc);
+  bool initialize(Mat desc);
+  bool initializeHyperplanes(Mat desc);
 
   // Compute the hash
-  vector<double> computeHash(Mat desc, vector<KeyPoint> kp);
+  vector<double> computeHash(Mat desc);
 
   // Access specifiers
   void showHash(vector<double> hash);
@@ -49,7 +51,7 @@ public:
 private:
 
   // Save the hyperplanes into a file for plotting
-  void saveToFile(Mat desc);
+  void saveToFile(Mat desc, string sub);
 
   // Creates the combination table for hash
   void createCombinations();
@@ -61,36 +63,23 @@ private:
 
   // Compute the hyperplanes
   void computeHyperplanes(Mat desc,
-                          vector<float>& centroid,
                           vector< vector<float> >& H, 
                           vector<float>& delta);
 
   // Compute the hash measure for a set of descriptors
-  vector<double> hashMeasure(Mat desc, 
-                             vector<KeyPoint> kp,
-                             vector<float> centroid, 
-                             vector< vector<float> > H, 
-                             vector<float> delta);
+  vector<double> hashMeasure(Mat desc);
 
   vector< vector<int> > computeRegions(Mat desc,
                                        vector< vector<float> > H, 
                                        vector<float> delta);
-
-  double angleBetweenVectors(vector<float> vector_a, 
-                             vector<float> vector_b);
-
-  double moduleBetweenVectors(vector<float> vector_a, 
-                              vector<float> vector_b);
 
   // Stores parameters
   Params params_;
 
   // Stereo vision properties
   vector<string> comb_;                     //!> Table of possible hash combinations
-  vector<float> centroid_;                  //!> Save the main centroid
   vector< vector<float> > H_;               //!> Save the main H
   vector<float> delta_;                     //!> Save the main delta
-  vector< vector<float> > sub_centroid_;    //!> Save the sub-region centroids
   vector< vector< vector<float> > > sub_H_; //!> Save the sub-region H
   vector< vector<float> > sub_delta_;       //!> Save the sub-region deltas
 };

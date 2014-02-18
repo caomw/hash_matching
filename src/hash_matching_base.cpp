@@ -33,8 +33,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
     files_path += "/";
 
   // Define image properties
-  StereoProperties ref_prop;
-  StereoProperties cur_prop;
+  StereoProperties ref_prop, cur_prop;
   Hash hash_obj;
 
   // Setup the parameters
@@ -72,11 +71,13 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   ref_prop.setImage(img_temp);
   ROS_INFO_STREAM("Reference Keypoints Size: " << ref_prop.getKp().size());
 
-  // Compute the hash
-  vector<double> ref_hash;
-  hash_obj.initialize(ref_prop.getDesc());
-  /*
-  ref_hash = hash_obj.computeHash(ref_prop.getDesc(), ref_prop.getKp());
+  // Compute the reference hash
+  if(!hash_obj.initialize(ref_prop.getDesc()))
+  {
+    ROS_ERROR("[HashMatchingBase:] Impossible to initialize the hyperplanes!");
+    return;
+  }
+  vector<double> ref_hash = hash_obj.computeHash(ref_prop.getDesc());
 
   // Loop directory images
   fs::directory_iterator it(img_dir);
@@ -94,15 +95,32 @@ hash_matching::HashMatchingBase::HashMatchingBase(
 
       // Compute the hash
       vector<double> cur_hash;
-      cur_hash = hash_obj.computeHash(cur_prop.getDesc(), cur_prop.getKp());
+      ros::WallTime start_time_hash = ros::WallTime::now();
+      cur_hash = hash_obj.computeHash(cur_prop.getDesc());
+      ros::WallDuration time_elapsed_hash = ros::WallTime::now() - start_time_hash;
 
       // Crosscheck matching
       vector<DMatch> matches;
       Mat match_mask;
+      ros::WallTime start_time_desc = ros::WallTime::now();
       hash_matching::OpencvUtils::crossCheckThresholdMatching(ref_prop.getDesc(), 
                                                               cur_prop.getDesc(), 
                                                               desc_thresh, 
                                                               match_mask, matches);
+      ros::WallDuration time_elapsed_desc = ros::WallTime::now() - start_time_desc;
+      //ROS_INFO_STREAM("Computation time: " << time_elapsed_hash.toSec() << " | " << time_elapsed_desc.toSec());
+
+      /*
+      ROS_INFO_STREAM("--------------------------------------------- " << ref_hash.size() << " | " << cur_hash.size());
+      for (uint t=0; t<ref_hash.size(); t++)
+        cout << ref_hash[t] << ",";
+      cout << endl;
+      ROS_INFO("*******");
+      for (uint t=0; t<cur_hash.size(); t++)
+        cout << cur_hash[t] << ",";
+      cout << endl;
+      */
+
       // Compare hashes
       double matching = match(ref_hash, cur_hash);
 
@@ -135,29 +153,16 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   // Show result
   for(int i=0; i<best_n; i++)
     ROS_INFO_STREAM("BEST MATCHING: " << dists[i].second << " (" << dists[i].first << ")");
-  */
 }
 
 double hash_matching::HashMatchingBase::match(vector<double> hash_1, vector<double> hash_2)
 {
   ROS_ASSERT(hash_1.size() == hash_2.size()); // Sanity check
 
-  // Get the maximum value of the vectors
-  vector<double> max_elements;
-  int max_1 = *std::max_element(hash_1.begin(), hash_1.end());
-  int max_2 = *std::max_element(hash_2.begin(), hash_2.end());
-  max_elements.push_back(max_1);
-  max_elements.push_back(max_2);
-  int max_val = *std::max_element(max_elements.begin(), max_elements.end());
-
   // Compute the distance
   double sum = 0.0;
   for (uint i=0; i<hash_1.size(); i++)
-  {
-    if (hash_1[i] == 0 || hash_2[i] == 0)
-      sum += pow(max_val, 2.0);
-    else
-      sum += pow(hash_1[i] - hash_2[i], 2.0);
-  }
-  return sqrt(sum);
+    sum += fabs(hash_1[i] - hash_2[i]);
+
+  return sum;
 }
