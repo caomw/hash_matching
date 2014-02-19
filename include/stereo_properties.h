@@ -31,8 +31,8 @@ public:
     int bucket_width;               //!> Bucket width.
     int bucket_height;              //!> Bucket height.
     int bucket_max;                 //!> Maximum number the features per bucket.
-    double features_max_value;
-    double N_levels;
+    double features_max_value;      //!> maximum value for the feature components; for SIFT is 256.
+    double N_levels;                //!> number of levels for the feature component value discretization
 
     // Default values
     static const int            DEFAULT_NUM_HYPERPLANES = 4;
