@@ -218,33 +218,16 @@ vector<double> hash_matching::Hash::computeHash(Mat desc)
 
 vector<double> hash_matching::Hash::hashMeasure(Mat desc)
 {
-  // Sanity check
-  vector<double> hash(3, 0);
-  if (desc.rows < 3)
-    return hash;
-
-  // Convert the cv Mat to Eigen::Matrix3f
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> h;
-  cv2eigen(desc, h);
-
-  // Compute the SVD
-  Eigen::JacobiSVD<Eigen::MatrixXf> svd(h, Eigen::ComputeThinU | Eigen::ComputeThinV);
-
-  // Get the singular vectors for the main singular value
-  Eigen::Vector3f sv = svd.singularValues();
-  Eigen::Vector3f u = svd.matrixU().col(0);
-  Eigen::Vector3f v = svd.matrixV().col(0);
-
-  // Sanity check
-  if (sv.size() != 3)
-    return hash;
-
-  // Mount
-  hash.clear();
-  for (uint i=0; i<3; i++)
-    hash.push_back((double)u[i]*sv[i]);
-  
-  return hash;
+  // Compute the centroid for this descriptors
+  vector<float> region_centroid;
+  for (int n=0; n<desc.cols; n++)
+  {
+    float mean = 0.0;
+    for (uint m=0; m<desc.rows; m++)
+      mean += desc.at<float>(m, n);
+    mean /= desc.rows;
+    region_centroid.push_back(mean);
+  }
 }
 
 vector< vector<int> > hash_matching::Hash::computeRegions(Mat desc,
