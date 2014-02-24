@@ -60,19 +60,25 @@ Uns32T computeUHashFunction(vector<float> random_vector, vector<double> bucket, 
   return h;
 }
 
-
 // Generate 'd' random numbers
 vector<float> compute_random_vector(uint seed, int size)
 {
   srand(seed);
   vector<float> h;
   h.clear();
+  ROS_ASSERT(MIN_HASH_RND <= MAX_HASH_RND);
   for (int i=0; i<size; i++)
   {
-     // float val = ((float(rand()) / float(RAND_MAX)) * (1 + 1)) -1.0; // generate the random values
-      float val = (float(rand())); // generate the random values
-     // ROS_INFO_STREAM("random data " << i << ";--" << val );
-      h.push_back(val); // store the random value in the vector
+    //float val = ((float(rand()) / float(RAND_MAX)) * (1 + 1)) -1.0; // generate the random values
+    // float val = ( (float(rand()) / (float)(RAND_MAX)) * MAX_HASH_RND  ) ; // generate the random values between 1 and MAX_HASH_RND
+    //  float val = ( ( (float)(rand()) % MAX_HASH_RND )+ 1); // generate the random values between 1 and MAX_HASH_RND
+    // output = min + (rand() % (int)(max - min + 1))
+    //  float val = ( ( (rand()) % (MAX_HASH_RND-1+1) )+ 1); // generate the random values between 1 and MAX_HASH_RND
+    // get a random real distributed uniformly
+    float val = (  ((MAX_HASH_RND-MIN_HASH_RND)*(float)(rand()))/(float)(RAND_MAX)  ) + MIN_HASH_RND; // generate the random values between 1 and MAX_HASH_RND
+    ROS_ASSERT(val >= MIN_HASH_RND && r <= MAX_HASH_RND);
+    ROS_INFO_STREAM("random data " << rand() << ";--" << MAX_HASH_RND-1+1 << ";" << (rand()) % (MAX_HASH_RND-1+1) );
+    h.push_back(val); // storMIN_HASH_RNDhe random value in the vector
   }
   return h;
 }

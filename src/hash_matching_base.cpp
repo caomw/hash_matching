@@ -55,7 +55,6 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   image_params.N_levels=N_levels;
 
 
-
   ref_prop.setParams(image_params);
   cur_prop.setParams(image_params);
 
@@ -79,7 +78,6 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   ostringstream output_csv2;
   ostringstream output_csv3;
   ostringstream output_csv4;*/
-
 
   // Read the template image and extract kp and descriptors
   Mat img_temp = imread(ref_path, CV_LOAD_IMAGE_COLOR);
@@ -316,21 +314,24 @@ hash_matching::HashMatchingBase::HashMatchingBase(
 
     // Hash indexs for the reference image
     // compute random vectors 
-      r1=compute_random_vector(101, ref_prop.getHash1().size());
-      r2=compute_random_vector(102, ref_prop.getHash2().size());
-      r3=compute_random_vector(103, ref_prop.getHash3().size());
-      r4=compute_random_vector(104, ref_prop.getHash4().size());
-      r5=compute_random_vector(105, ref_prop.getHash5().size());
-    // ROS_INFO_STREAM(" random_vectors " << r1 << ";--" << r2 << ";--" << r3 << ";--" << r4 << ";--" << r5);  
+      uint seed= ((uint)time(NULL))*1e-08;
+      ROS_INFO_STREAM("time" << seed );
+      r1=compute_random_vector(seed, ref_prop.getHash1().size());
+      r2=compute_random_vector(seed+1, ref_prop.getHash2().size());
+      r3=compute_random_vector(seed+2, ref_prop.getHash3().size());
+      r4=compute_random_vector(seed+3, ref_prop.getHash4().size());
+      r5=compute_random_vector(seed+4, ref_prop.getHash5().size());
+     // ROS_INFO_STREAM(" random_vectors " << r1 << ";--" << r2 << ";--" << r3 << ";--" << r4 << ";--" << r5);  
     //  ROS_INFO_STREAM(" random_vectors " << r1);  
     // reference image --> generate the hash functions (indexes in the hash tables 1,2,3,4,5)
       // every hash function gives the index of a certain bucket of a certain image inside its corresponding 
       // hash table. This index is computed using random numbers. 
 
       vector<double> r; // index on hash table 1 
+
       for (int i=0; i<ref_prop.getHash1().size(); i++)
       {
-        r.push_back((double)ref_prop.getHash1()[i] ); // convert hash1 fro int to double; hashfunction needs (double) vector
+        r.push_back((double)ref_prop.getHash1()[i] ); // convert hash1 from int to double; hashfunction needs (double) vector
         //ROS_INFO_STREAM("bucket data double " << i << ";--" << r[i]);
       }
       Uns32T hashfunction1_ref=computeUHashFunction(r1,r,ref_prop.getHash1().size(), UH_PRIME_DEFAULT, hashTableSize);
@@ -353,15 +354,16 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   //  key images --> generate the hash index for the buckets 1,2,3,4,5 for all key images
   //  random vectors
       it=v.begin();
-      
+      ROS_ASSERT(count > 0);
+      seed = ((uint)time(NULL));
       for (int i=0;i<count;i++) // for each key image generate 5 hash indexes 
       {
-        //ROS_INFO_STREAM("iteration" << i);
-        r1=compute_random_vector(10, buckets_tmp1[i].size()); // compute a random vector for a key image and a certain bucket
-        r2=compute_random_vector(11, buckets_tmp2[i].size());
-        r3=compute_random_vector(12, buckets_tmp3[i].size());
-        r4=compute_random_vector(13, buckets_tmp4[i].size());
-        r5=compute_random_vector(14, buckets_tmp5[i].size());
+        ROS_INFO_STREAM("time" << seed );
+        r1=compute_random_vector(seed, buckets_tmp1[i].size()); // compute a random vector for a key image and a certain bucket
+        r2=compute_random_vector(seed+1, buckets_tmp2[i].size());
+        r3=compute_random_vector(seed+2, buckets_tmp3[i].size());
+        r4=compute_random_vector(seed+3, buckets_tmp4[i].size());
+        r5=compute_random_vector(seed+3, buckets_tmp5[i].size());
    
         // compute the hashes (indexes of each bucket of the key image in its corresponding hash table)
         Uns32T hashfunction1_cur=computeUHashFunction(r1,buckets_tmp1[i],buckets_tmp1[i].size(), UH_PRIME_DEFAULT, hashTableSize);
@@ -421,7 +423,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
             comp.hashmatching=(double)diff1; 
             comp.image=it->filename().string();
             comparison1.push_back(comp);
-            hash_comparison1 << comp.image << ";" << diff1 << endl; // save in a txt file
+            hash_comparison1 << comp.image << ";" << diff1 << ";" << comp.featurematchings << endl; // save in a txt file
             fstream h1_out(hash1_compare.c_str(), ios::out | ios::trunc);
             h1_out << hash_comparison1.str();
             h1_out.close();
@@ -433,7 +435,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
             comp.hashmatching=(double)diff2; 
             comp.image=it->filename().string();
             comparison2.push_back(comp);
-            hash_comparison2 << comp.image << ";" << diff2 << endl; // save in a txt file
+            hash_comparison2 << comp.image << ";" << diff2 << ";" << comp.featurematchings << endl; // save in a txt file
             fstream h2_out(hash2_compare.c_str(), ios::out | ios::trunc);
             h2_out << hash_comparison2.str();
             h2_out.close();
@@ -445,7 +447,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
             comp.hashmatching=(double)diff3; 
             comp.image=it->filename().string();
             comparison3.push_back(comp);
-            hash_comparison3 << comp.image << ";" << diff3 << endl; // save in a txt file
+            hash_comparison3 << comp.image << ";" << diff3 << ";" << comp.featurematchings << endl; // save in a txt file
             fstream h3_out(hash3_compare.c_str(), ios::out | ios::trunc);
             h3_out << hash_comparison3.str();
             h3_out.close();
@@ -457,7 +459,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
             comp.hashmatching=(double)diff4; 
             comp.image=it->filename().string();
             comparison4.push_back(comp);
-            hash_comparison4 << comp.image << ";" << diff4 << endl; // save in a txt file
+            hash_comparison4 << comp.image << ";" << diff4 << ";" << comp.featurematchings << endl; // save in a txt file
             fstream h4_out(hash4_compare.c_str(), ios::out | ios::trunc);
             h4_out << hash_comparison4.str();
             h4_out.close();
@@ -470,7 +472,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
             comp.image=it->filename().string();
             comparison5.push_back(comp);
            // ROS_INFO_STREAM("compara5: " << it->filename().string() << hash_table5[i] << ";" << hashfunction5_ref+tolerance << ";" << hashfunction5_ref-tolerance << ";" << diff5 );
-            hash_comparison5 << comp.image << ";" << diff5 << endl; // save in a txt file
+            hash_comparison5 << comp.image << ";" << diff5 << ";" << comp.featurematchings << endl; // save in a txt file
             fstream h5_out(hash5_compare.c_str(), ios::out | ios::trunc);
             h5_out << hash_comparison5.str();
             h5_out.close();
@@ -478,6 +480,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
         it++; // next image in the directory
       }
     
+
 
   /*// Save data into file
   string out_file;
@@ -530,6 +533,8 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   sort(comparison4.begin(), comparison4.end(), hash_matching::OpencvUtils::sorttrioByDistance);
   sort(comparison5.begin(), comparison5.end(), hash_matching::OpencvUtils::sorttrioByDistance);
   
+
+
   // Show results
   /*for(int i=0; i<best_n; i++)
   {
@@ -565,6 +570,10 @@ hash_matching::HashMatchingBase::HashMatchingBase(
     ROS_INFO_STREAM("BEST MATCHING 5:   " << comparison5[i].image << " (" << comparison5[i].hashmatching << ")" << "(" << comparison5[i].featurematchings << ")");
   }
 
+  
+
+
+  
   ROS_INFO("FINISH!");
 }
 
