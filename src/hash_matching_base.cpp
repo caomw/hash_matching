@@ -384,6 +384,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
        //ROS_INFO_STREAM("iteration" << i);
       }
 
+
       string hash1_compare,hash2_compare,hash3_compare,hash4_compare,hash5_compare;
       hash1_compare = files_path + "hash1_compare.txt";
       hash2_compare = files_path + "hash2_compare.txt";
@@ -416,63 +417,67 @@ hash_matching::HashMatchingBase::HashMatchingBase(
         if ( (hash_table1[i] <= (hashfunction1_ref+tolerance) ) && (hash_table1[i] >= (hashfunction1_ref-tolerance) ) )
         { // compute the difference between both hashes. 
             // Crosscheck feature matching
-            string path = img_dir + "/" + it->filename().string();
+            string filename = it->filename().string();
             int diff1 = abs((int)hash_table1[i]-(int)hashfunction1_ref);
           //  ROS_INFO_STREAM("compara: " << it->filename().string() << hash_table1[i] << ";" << hashfunction1_ref+tolerance << ";" << hashfunction1_ref-tolerance << ";" << diff1 );
             comp.featurematchings=matches.size();
             comp.hashmatching=(double)diff1; 
-            comp.image=it->filename().string();
+            comp.image=filename.substr(0,7);
             comparison1.push_back(comp);
-            hash_comparison1 << comp.image << ";" << diff1 << ";" << comp.featurematchings << endl; // save in a txt file
+            hash_comparison1 << comp.image << " " << diff1 << " " << comp.featurematchings << endl; // save in a txt file
             fstream h1_out(hash1_compare.c_str(), ios::out | ios::trunc);
             h1_out << hash_comparison1.str();
             h1_out.close();
         }
         if ( (hash_table2[i] <= (hashfunction2_ref+tolerance) ) && (hash_table2[i] >= (hashfunction2_ref-tolerance) ) )
         { // compute the difference between both hashes. 
+            string filename = it->filename().string();
             int diff2 = abs((int)hash_table2[i]-(int)hashfunction2_ref);
             comp.featurematchings=matches.size(); 
             comp.hashmatching=(double)diff2; 
-            comp.image=it->filename().string();
+            comp.image=filename.substr(0,7);
             comparison2.push_back(comp);
-            hash_comparison2 << comp.image << ";" << diff2 << ";" << comp.featurematchings << endl; // save in a txt file
+            hash_comparison2 << comp.image << " " << diff2 << " " << comp.featurematchings << endl; // save in a txt file
             fstream h2_out(hash2_compare.c_str(), ios::out | ios::trunc);
             h2_out << hash_comparison2.str();
             h2_out.close();
         }
         if ( (hash_table3[i] <= (hashfunction3_ref+tolerance) ) && (hash_table3[i] >= (hashfunction3_ref-tolerance) ) )
         { // compute the difference between both hashes. 
+            string filename = it->filename().string();
             int diff3 = abs((int)hash_table3[i]-(int)hashfunction3_ref);
             comp.featurematchings=matches.size();
             comp.hashmatching=(double)diff3; 
-            comp.image=it->filename().string();
+            comp.image=filename.substr(0,7);
             comparison3.push_back(comp);
-            hash_comparison3 << comp.image << ";" << diff3 << ";" << comp.featurematchings << endl; // save in a txt file
+            hash_comparison3 << comp.image << " " << diff3 << " " << comp.featurematchings << endl; // save in a txt file
             fstream h3_out(hash3_compare.c_str(), ios::out | ios::trunc);
             h3_out << hash_comparison3.str();
             h3_out.close();
         }
         if ( (hash_table4[i] <= (hashfunction4_ref+tolerance) ) && (hash_table4[i] >= (hashfunction4_ref-tolerance) ) )
         { // compute the difference between both hashes. 
+            string filename = it->filename().string();
             int diff4 = abs((int)hash_table4[i]-(int)hashfunction4_ref);
             comp.featurematchings=matches.size();
             comp.hashmatching=(double)diff4; 
-            comp.image=it->filename().string();
+            comp.image=filename.substr(0,7);
             comparison4.push_back(comp);
-            hash_comparison4 << comp.image << ";" << diff4 << ";" << comp.featurematchings << endl; // save in a txt file
+            hash_comparison4 << comp.image << " " << diff4 << " " << comp.featurematchings << endl; // save in a txt file
             fstream h4_out(hash4_compare.c_str(), ios::out | ios::trunc);
             h4_out << hash_comparison4.str();
             h4_out.close();
         }
         if ( (hash_table5[i] <= (hashfunction5_ref+tolerance) ) && (hash_table5[i] >= (hashfunction5_ref-tolerance) ) )
         { // compute the difference between both hashes. 
+            string filename = it->filename().string();
             int diff5 = abs((int)hash_table5[i]-(int)hashfunction5_ref);
             comp.featurematchings=matches.size(); 
             comp.hashmatching=(double)diff5; 
-            comp.image=it->filename().string();
+            comp.image=filename.substr(0,7); // substring to eliminate the .png 
             comparison5.push_back(comp);
            // ROS_INFO_STREAM("compara5: " << it->filename().string() << hash_table5[i] << ";" << hashfunction5_ref+tolerance << ";" << hashfunction5_ref-tolerance << ";" << diff5 );
-            hash_comparison5 << comp.image << ";" << diff5 << ";" << comp.featurematchings << endl; // save in a txt file
+            hash_comparison5 << comp.image << " " << diff5 << " " << comp.featurematchings << endl; // save in a txt file
             fstream h5_out(hash5_compare.c_str(), ios::out | ios::trunc);
             h5_out << hash_comparison5.str();
             h5_out.close();
