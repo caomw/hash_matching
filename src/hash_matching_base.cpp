@@ -228,7 +228,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
       hash_table5.push_back(hashfunction5_cur); // will have as many hash index as the number of  key images
 
       // Log
-      hash_indexes << filename << ";" << hashfunction1_cur << ";" << hashfunction2_cur << ";" << hashfunction3_cur << ";" << hashfunction4_cur << ";" << hashfunction5_cur << endl; 
+      hash_indexes << rawname << ";" << hashfunction1_cur << ";" << hashfunction2_cur << ";" << hashfunction3_cur << ";" << hashfunction4_cur << ";" << hashfunction5_cur << ";" << matches.size() << endl; 
 
       if ( (hashfunction1_cur <= (hashfunction1_ref+tolerance) ) && (hashfunction1_cur >= (hashfunction1_ref-tolerance) ) )
       {
