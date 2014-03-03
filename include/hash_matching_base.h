@@ -26,7 +26,7 @@ protected:
 
 private:
 	double match(vector<double> hash_1, vector<double> hash_2);
-	vector<double> computeHash(Hash hash_obj, Mat desc, vector<Hash>& hash_objs, hash_matching::Hash::Params hash_params);
+	vector<double> computeHash();
 };
 
 } // namespace

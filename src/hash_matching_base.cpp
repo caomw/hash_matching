@@ -1,5 +1,6 @@
 #include "hash_matching_base.h"
 #include "stereo_properties.h"
+#include "hash.h"
 #include "opencv_utils.h"
 #include <boost/shared_ptr.hpp>
 #include <cv_bridge/cv_bridge.h>
@@ -16,13 +17,12 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   // Load parameters
   string ref_path, img_dir, desc_type, files_path;
   double desc_thresh;
-  int num_hyperplanes, bucket_width, bucket_height, bucket_max, best_n;
+  int bucket_width, bucket_height, bucket_max, best_n;
   nh_private_.param("ref_path", ref_path, std::string(""));
   nh_private_.param("img_dir", img_dir, std::string(""));
   nh_private_.param("desc_type", desc_type, std::string("SIFT"));
   nh_private_.getParam("desc_thresh", desc_thresh);
   nh_private_.getParam("best_n", best_n);
-  nh_private_.getParam("num_hyperplanes", num_hyperplanes);
   nh_private_.getParam("bucket_width", bucket_width);
   nh_private_.getParam("bucket_height", bucket_height);
   nh_private_.getParam("bucket_max", bucket_max);
@@ -44,10 +44,6 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   image_params.bucket_max = bucket_max;
   ref_prop.setParams(image_params);
   cur_prop.setParams(image_params);
-
-  hash_matching::Hash::Params hash_params;
-  hash_params.num_hyperplanes = num_hyperplanes;
-  hash_obj.setParams(hash_params);
 
   // Sanity checks
   if (!boost::filesystem::exists(ref_path) || ref_path == "")
@@ -120,7 +116,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
         cout << cur_hash[t] << ",";
       cout << endl;
       */
-
+  
       // Compare hashes
       double matching = match(ref_hash, cur_hash);
 

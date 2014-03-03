@@ -38,9 +38,11 @@ void hash_matching::StereoProperties::setImage(const Mat& img)
   hash_matching::OpencvUtils::keypointDetector(img_, kp_, params_.desc_type);
   
   // Bucket keypoints
+  /*
   kp_ = hash_matching::OpencvUtils::bucketKeypoints(kp_, 
                                                     params_.bucket_width, 
                                                     params_.bucket_height, 
                                                     params_.bucket_max);
+  */
   hash_matching::OpencvUtils::descriptorExtraction(img_, kp_, desc_, params_.desc_type);
 }

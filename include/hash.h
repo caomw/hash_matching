@@ -20,27 +20,9 @@ public:
   // Class contructor
   Hash();
 
-  struct Params
-  {
-    //Default constructor sets all values to defaults.
-    Params();
-
-    // Class parameters
-    int num_hyperplanes;            //!> Number of hyperplanes to consider for hash.
-
-    // Default values
-    static const int            DEFAULT_NUM_HYPERPLANES = 4;
-  };
-
-  // Set the parameter struct
-  void setParams(const Params& params);
-
-  // Return current parameters
-  inline Params params() const { return params_; }
-
   // Initialize class
   bool initialize(Mat desc);
-  bool initializeHyperplanes(Mat desc);
+  bool initializeHyperplanes(Mat desc, int &region_size);
 
   // Compute the hash
   vector<double> computeHash(Mat desc);
@@ -67,14 +49,11 @@ private:
                           vector<float>& delta);
 
   // Compute the hash measure for a set of descriptors
-  vector<double> hashMeasure(Mat desc);
+  double hashMeasure(Mat desc);
 
   vector< vector<int> > computeRegions(Mat desc,
                                        vector< vector<float> > H, 
                                        vector<float> delta);
-
-  // Stores parameters
-  Params params_;
 
   // Stereo vision properties
   vector<string> comb_;                     //!> Table of possible hash combinations
@@ -82,6 +61,7 @@ private:
   vector<float> delta_;                     //!> Save the main delta
   vector< vector< vector<float> > > sub_H_; //!> Save the sub-region H
   vector< vector<float> > sub_delta_;       //!> Save the sub-region deltas
+  int num_hyperplanes_;                     //!> Number of hyperplanes
 };
 
 } // namespace
