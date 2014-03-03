@@ -21,8 +21,8 @@ public:
   Hash();
 
   // Initialize class
-  bool initialize(Mat desc);
-  bool initializeHyperplanes(Mat desc, int &region_size);
+  bool initialize(Mat desc, int max_features);
+  bool initializeHyperplanes(Mat desc, int max_features, int &region_size);
 
   // Compute the hash
   vector<double> computeHash(Mat desc);
@@ -46,7 +46,8 @@ private:
   // Compute the hyperplanes
   void computeHyperplanes(Mat desc,
                           vector< vector<float> >& H, 
-                          vector<float>& delta);
+                          vector<float>& delta,
+                          vector<float> centroid);
 
   // Compute the hash measure for a set of descriptors
   double hashMeasure(Mat desc);
@@ -59,8 +60,10 @@ private:
   vector<string> comb_;                     //!> Table of possible hash combinations
   vector< vector<float> > H_;               //!> Save the main H
   vector<float> delta_;                     //!> Save the main delta
+  vector<float> centroid_;                  //!> Save the main centroid
   vector< vector< vector<float> > > sub_H_; //!> Save the sub-region H
   vector< vector<float> > sub_delta_;       //!> Save the sub-region deltas
+  vector< vector<float> > sub_centroid_;    //!> Save the sub-region centroid
   int num_hyperplanes_;                     //!> Number of hyperplanes
 };
 

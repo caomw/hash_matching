@@ -17,15 +17,13 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   // Load parameters
   string ref_path, img_dir, desc_type, files_path;
   double desc_thresh;
-  int bucket_width, bucket_height, bucket_max, best_n;
+  int max_features, best_n;
   nh_private_.param("ref_path", ref_path, std::string(""));
   nh_private_.param("img_dir", img_dir, std::string(""));
   nh_private_.param("desc_type", desc_type, std::string("SIFT"));
   nh_private_.getParam("desc_thresh", desc_thresh);
   nh_private_.getParam("best_n", best_n);
-  nh_private_.getParam("bucket_width", bucket_width);
-  nh_private_.getParam("bucket_height", bucket_height);
-  nh_private_.getParam("bucket_max", bucket_max);
+  nh_private_.getParam("max_features", max_features);
   nh_private_.param("files_path", files_path, std::string("/home/user"));
 
   // Files path sanity check
@@ -39,9 +37,6 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   // Setup the parameters
   hash_matching::StereoProperties::Params image_params;
   image_params.desc_type = desc_type;
-  image_params.bucket_width = bucket_width;
-  image_params.bucket_height = bucket_height;
-  image_params.bucket_max = bucket_max;
   ref_prop.setParams(image_params);
   cur_prop.setParams(image_params);
 
@@ -68,11 +63,12 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   ROS_INFO_STREAM("Reference Keypoints Size: " << ref_prop.getKp().size());
 
   // Compute the reference hash
-  if(!hash_obj.initialize(ref_prop.getDesc()))
+  if(!hash_obj.initialize(ref_prop.getDesc(), max_features))
   {
     ROS_ERROR("[HashMatchingBase:] Impossible to initialize the hyperplanes!");
     return;
   }
+
   vector<double> ref_hash = hash_obj.computeHash(ref_prop.getDesc());
 
   // Loop directory images

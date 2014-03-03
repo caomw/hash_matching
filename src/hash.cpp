@@ -9,7 +9,7 @@
 // Hash constructor
 hash_matching::Hash::Hash() {}
 
-bool hash_matching::Hash::initialize(Mat desc)
+bool hash_matching::Hash::initialize(Mat desc, int max_features)
 {
   // Try to build the hyperplanes
   int maxHyperplanes = 20;
@@ -19,7 +19,7 @@ bool hash_matching::Hash::initialize(Mat desc)
   {
     num_hyperplanes_++;
     int region_size;
-    init_done = initializeHyperplanes(desc, region_size);
+    init_done = initializeHyperplanes(desc, max_features, region_size);
     ROS_INFO_STREAM("[Hash:] Initializing iteration with " << num_hyperplanes_ << " hyperplanes (" << region_size << "): " << init_done);
   }
 
@@ -32,7 +32,7 @@ bool hash_matching::Hash::initialize(Mat desc)
   return init_done;
 }
 
-bool hash_matching::Hash::initializeHyperplanes(Mat desc, int &region_size)
+bool hash_matching::Hash::initializeHyperplanes(Mat desc, int max_features, int &region_size)
 {
   // Initialize class properties
   H_.clear();
@@ -46,9 +46,11 @@ bool hash_matching::Hash::initializeHyperplanes(Mat desc, int &region_size)
   // Compute main hyperplanes
   vector< vector<float> > H;
   vector<float> delta;
-  computeHyperplanes(desc, H, delta);
+  vector<float> centroid;
+  computeHyperplanes(desc, H, delta, centroid);
   H_ = H;
   delta_ = delta;
+  centroid_ = centroid;
 
   // Compute the regions
   vector< vector<int> > hash_idx = computeRegions(desc, H_, delta_);
@@ -63,8 +65,8 @@ bool hash_matching::Hash::initializeHyperplanes(Mat desc, int &region_size)
     for (uint n=0; n<indices.size(); n++)
       region_desc.push_back(desc.row(indices[n]));
 
-    // Detect empty regions or regions with to much descriptors
-    if(region_desc.rows > 10)
+    // Detect regions with to many descriptors
+    if(region_desc.rows > max_features)
     {
       region_size = region_desc.rows;
       return false;
@@ -73,9 +75,11 @@ bool hash_matching::Hash::initializeHyperplanes(Mat desc, int &region_size)
     // Compute the hyperplanes for this region
     H.clear();
     delta.clear();
-    computeHyperplanes(region_desc, H, delta);
+    centroid.clear();
+    computeHyperplanes(region_desc, H, delta, centroid);
     sub_H_.push_back(H);
     sub_delta_.push_back(delta);
+    sub_centroid_.push_back(centroid);
     region_desc.release();
   }
   return true;
@@ -131,13 +135,13 @@ void hash_matching::Hash::recursiveCombinations(const vector< vector<string> > &
 // Computes the hyperplanes
 void hash_matching::Hash::computeHyperplanes(Mat desc,
                                              vector< vector<float> >& H, 
-                                             vector<float>& delta)
+                                             vector<float>& delta,
+                                             vector<float> centroid)
 {
   // Set the number of hyperplanes
   int d = num_hyperplanes_;
 
   // Compute the descriptors centroid
-  vector<float> centroid;
   centroid.clear();
   for (int n=0; n<desc.cols; n++)
   {
@@ -252,11 +256,11 @@ vector< vector<int> > hash_matching::Hash::computeRegions(Mat desc,
 
   // Sanity check
   if (H.size() < 1) {
-    ROS_ERROR("[Hash:] No hyperplanes received!");
+    //ROS_ERROR("[Hash:] No hyperplanes received!");
     return hash_idx;
   }
   if (H[0].size() < 1) {
-    ROS_ERROR("[Hash:] At least, one hyperplane is empty!");
+    //ROS_ERROR("[Hash:] At least, one hyperplane is empty!");
     return hash_idx;
   }
 
