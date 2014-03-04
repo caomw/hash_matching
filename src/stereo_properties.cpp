@@ -280,8 +280,8 @@ void hash_matching::StereoProperties::computeHash()
 
   // compute the 5th hash : the feature quantization hystogram
   double quantification_interval=(params_.features_max_value/params_.N_levels);
-  ROS_INFO_STREAM("quantification_interval;" << (float)quantification_interval << "valores: " << params_.features_max_value << ";" << params_.N_levels);  
-  ROS_INFO_STREAM("resto quatifica;" << fmod(params_.features_max_value,params_.N_levels));  
+  //ROS_INFO_STREAM("quantification_interval;" << (float)quantification_interval << "valores: " << params_.features_max_value << ";" << params_.N_levels);  
+  //ROS_INFO_STREAM("resto quatifica;" << fmod(params_.features_max_value,params_.N_levels));  
   int level, integer_part=0; 
   vector<uint> hystogram(params_.N_levels, 0); // vector of integers, it contains the hystogram values (number of occurences) for each level. 
   // initialize the hystogram with 0's

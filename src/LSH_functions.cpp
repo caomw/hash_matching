@@ -77,7 +77,7 @@ vector<float> compute_random_vector(uint seed, int size)
     // get a random real distributed uniformly
     float val = (  ((MAX_HASH_RND-MIN_HASH_RND)*(float)(rand()))/(float)(RAND_MAX)  ) + MIN_HASH_RND; // generate the random values between 1 and MAX_HASH_RND
     ROS_ASSERT(val >= MIN_HASH_RND && r <= MAX_HASH_RND);
-    ROS_INFO_STREAM("random data " << rand() << ";--" << MAX_HASH_RND-1+1 << ";" << (rand()) % (MAX_HASH_RND-1+1) );
+    //ROS_INFO_STREAM("random data " << rand() << ";--" << MAX_HASH_RND-1+1 << ";" << (rand()) % (MAX_HASH_RND-1+1) );
     h.push_back(val); // storMIN_HASH_RNDhe random value in the vector
   }
   return h;
