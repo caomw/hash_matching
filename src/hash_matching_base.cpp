@@ -69,12 +69,12 @@ hash_matching::HashMatchingBase::HashMatchingBase(
     return;
   }
 
-  vector<double> ref_hash = hash_obj.computeHash(ref_prop.getDesc());
+  vector<float> ref_hash = hash_obj.computeHash(ref_prop.getDesc());
 
   // Loop directory images
   fs::directory_iterator it(img_dir);
   fs::directory_iterator end;
-  vector< pair<double,string> > dists;
+  vector< pair<float,string> > dists;
   while (it!=end)
   {
     // Check if the directory entry is an directory.
@@ -86,7 +86,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
       cur_prop.setImage(img_cur);
 
       // Compute the hash
-      vector<double> cur_hash;
+      vector<float> cur_hash;
       ros::WallTime start_time_hash = ros::WallTime::now();
       cur_hash = hash_obj.computeHash(cur_prop.getDesc());
       ros::WallDuration time_elapsed_hash = ros::WallTime::now() - start_time_hash;
@@ -114,7 +114,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
       */
   
       // Compare hashes
-      double matching = match(ref_hash, cur_hash);
+      float matching = match(ref_hash, cur_hash);
 
       if (isfinite(matching))
       {
@@ -147,12 +147,12 @@ hash_matching::HashMatchingBase::HashMatchingBase(
     ROS_INFO_STREAM("BEST MATCHING: " << dists[i].second << " (" << dists[i].first << ")");
 }
 
-double hash_matching::HashMatchingBase::match(vector<double> hash_1, vector<double> hash_2)
+float hash_matching::HashMatchingBase::match(vector<float> hash_1, vector<float> hash_2)
 {
   ROS_ASSERT(hash_1.size() == hash_2.size()); // Sanity check
 
   // Compute the distance
-  double sum = 0.0;
+  float sum = 0.0;
   for (uint i=0; i<hash_1.size(); i++)
     sum += fabs(hash_1[i] - hash_2[i]);
 

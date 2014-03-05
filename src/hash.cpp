@@ -12,19 +12,20 @@ hash_matching::Hash::Hash() {}
 bool hash_matching::Hash::initialize(Mat desc, int max_features)
 {
   // Try to build the hyperplanes
-  int maxHyperplanes = 20;
+  int max_hyperplanes = 20;
   bool init_done = false;
-  num_hyperplanes_ = 1;
-  while(!init_done && num_hyperplanes_<maxHyperplanes)
+  num_hyperplanes_ = 15;
+  while(!init_done && num_hyperplanes_>1)
   {
-    num_hyperplanes_++;
     int region_size;
     init_done = initializeHyperplanes(desc, max_features, region_size);
     ROS_INFO_STREAM("[Hash:] Initializing iteration with " << num_hyperplanes_ << " hyperplanes (" << region_size << "): " << init_done);
+    num_hyperplanes_--;
   }
+  num_hyperplanes_++;
 
   // Log
-  if (num_hyperplanes_ == maxHyperplanes && !init_done)
+  if (!init_done)
     ROS_ERROR("[Hash:] Impossible to find a correct number of hyperplanes!");
   else
     ROS_INFO_STREAM("[Hash:] Initialization finishes with " << num_hyperplanes_ << " hyperplanes.");
@@ -39,6 +40,7 @@ bool hash_matching::Hash::initializeHyperplanes(Mat desc, int max_features, int 
   delta_.clear();
   sub_H_.clear();
   sub_delta_.clear();
+  sub_seeds_.clear();
 
   // Compute combinations
   createCombinations();
@@ -47,6 +49,7 @@ bool hash_matching::Hash::initializeHyperplanes(Mat desc, int max_features, int 
   vector< vector<float> > H;
   vector<float> delta;
   vector<float> centroid;
+  vector<int> seeds;
   computeHyperplanes(desc, H, delta, centroid);
   H_ = H;
   delta_ = delta;
@@ -57,6 +60,7 @@ bool hash_matching::Hash::initializeHyperplanes(Mat desc, int max_features, int 
 
   // Compute the hyperplanes for every region
   region_size = -1;
+  int seed = time(NULL);
   for (uint i=0; i<comb_.size(); i++)
   {
     // Get the descriptors for this subregion
@@ -66,7 +70,7 @@ bool hash_matching::Hash::initializeHyperplanes(Mat desc, int max_features, int 
       region_desc.push_back(desc.row(indices[n]));
 
     // Detect regions with to many descriptors
-    if(region_desc.rows > max_features)
+    if(region_desc.rows <= 0) // max_features)
     {
       region_size = region_desc.rows;
       return false;
@@ -81,6 +85,12 @@ bool hash_matching::Hash::initializeHyperplanes(Mat desc, int max_features, int 
     sub_delta_.push_back(delta);
     sub_centroid_.push_back(centroid);
     region_desc.release();
+
+    // Save the seeds for this region
+    seeds.clear();
+    for (uint j=0; j<comb_.size(); j++)
+      seeds.push_back(seed+j);
+    sub_seeds_.push_back(seeds);
   }
   return true;
 }
@@ -155,7 +165,6 @@ void hash_matching::Hash::computeHyperplanes(Mat desc,
   }
 
   // Generate 'd' random hyperplanes
-  // srand(101);
   H.clear();
   for (int i=0; i<d; i++)
   {
@@ -181,10 +190,10 @@ void hash_matching::Hash::computeHyperplanes(Mat desc,
   }
 }
 
-vector<double> hash_matching::Hash::computeHash(Mat desc)
+vector<float> hash_matching::Hash::computeHash(Mat desc)
 {
   // Initialize hash
-  vector<double> hash;
+  vector<float> hash;
 
   // Compute the regions
   vector< vector<int> > hash_idx = computeRegions(desc, H_, delta_);
@@ -209,11 +218,18 @@ vector<double> hash_matching::Hash::computeHash(Mat desc)
       for (uint n=0; n<sub_indices.size(); n++)
         sub_region_desc.push_back(region_desc.row(sub_indices[n]));
 
-      // Compute the hash for every subregion and attach to the main hash (regions with 0 or 1 descriptors are not significant)
-      double sub_hash = 0.0;
-      if (sub_region_desc.rows > 1)
-        sub_hash = hashMeasure(sub_region_desc);
-      hash.push_back(sub_hash);
+      // Compute the hash for every subregion and attach to the main hash
+      if (sub_region_desc.rows > 0)
+      {
+        vector <float> sub_hash = hashMeasure(sub_region_desc, sub_seeds_[i][j]);
+        hash.insert(hash.end(), sub_hash.begin(), sub_hash.end());
+      }
+      else
+      {
+        // No descriptors in this region
+        vector <float> r = compute_random_vector(sub_seeds_[i][j], desc.cols);
+        hash.insert(hash.end(), r.begin(), r.end());
+      }
 
       // Clear
       sub_region_desc.release();
@@ -225,21 +241,29 @@ vector<double> hash_matching::Hash::computeHash(Mat desc)
   return hash;
 }
 
-double hash_matching::Hash::hashMeasure(Mat desc)
+vector <float> hash_matching::Hash::hashMeasure(Mat desc, int seed)
 {
-  // Compute the centroid for these descriptors
-  double sum = 0.0;
+  // Compute the random vector
+  vector <float> r = compute_random_vector(seed, desc.rows);
+
+  // Project the descriptors
+  vector<float> h;
   for (int n=0; n<desc.cols; n++)
   {
-    float mean = 0.0;
+    float desc_sum = 0.0;
     for (uint m=0; m<desc.rows; m++)
-      mean += desc.at<float>(m, n);
-    mean /= desc.rows;
-    sum += pow((double)mean, 2);
-  }  
+    {
+      desc_sum += r[m]*desc.at<float>(m, n);
+    }
+    h.push_back(desc_sum);
+  }
 
-  // Distance from centroid to region origin
-  return sqrt(sum);
+  // Normalize the vector
+  float max_value = *std::max_element(h.begin(), h.end());
+  for (uint i=0; i<h.size(); i++)
+    h[i] = h[i]/max_value;
+
+  return h;
 }
 
 vector< vector<int> > hash_matching::Hash::computeRegions(Mat desc,
@@ -295,4 +319,13 @@ vector< vector<int> > hash_matching::Hash::computeRegions(Mat desc,
     hash_idx[pos] = t;
   }
   return hash_idx;
+}
+
+vector<float> hash_matching::Hash::compute_random_vector(uint seed, int size)
+{
+  srand(seed);
+  vector<float> h;
+  for (int i=0; i<size; i++)
+    h.push_back( ((float) rand() / (RAND_MAX)) );
+  return h;
 }

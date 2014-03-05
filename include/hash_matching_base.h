@@ -25,8 +25,8 @@ protected:
 	ros::NodeHandle nh_private_;
 
 private:
-	double match(vector<double> hash_1, vector<double> hash_2);
-	vector<double> computeHash();
+	float match(vector<float> hash_1, vector<float> hash_2);
+	vector<float> computeHash();
 };
 
 } // namespace
