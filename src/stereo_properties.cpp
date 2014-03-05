@@ -39,6 +39,7 @@ vector<double> hash_matching::StereoProperties::getHash2() { return hash2_; } //
 vector<double> hash_matching::StereoProperties::getHash3() { return hash3_; } // module | bin centroid-planes centroid|
 vector<double> hash_matching::StereoProperties::getHash4() { return hash4_; } // centroid variance
 vector<uint> hash_matching::StereoProperties::getHash5() { return hash5_; } // hystogram feature distribution
+vector<double> hash_matching::StereoProperties::getHash6() { return hash6_; } // escalar products with random vectors (projections in random direction)
 vector<float> hash_matching::StereoProperties::getCentroid() { return centroid_; }
 vector< vector<float> > hash_matching::StereoProperties::getH() { return H_; }
 vector<float> hash_matching::StereoProperties::getDelta() { return delta_; }
@@ -193,6 +194,50 @@ vector<double> hash_matching::StereoProperties::computeSVD(Mat desc, int dim)
   return r;
 }
 
+vector<float> hash_matching::StereoProperties::compute_unitary_random_vector(uint seed, int size)
+{
+  srand(seed);
+  vector<float> h;
+  h.clear();
+  ROS_ASSERT(MIN_HASH_UNI_RND <= MAX_HASH_UNI_RND);
+  for (int i=0; i<size; i++)
+  {
+   float val = (float(rand()) / float(RAND_MAX)); // generate the random values between  0 and 1
+    ROS_ASSERT(val >= MIN_HASH_UNI_RND && r <= MAX_HASH_UNI_RND);
+   // ROS_INFO_STREAM("random value" << val);
+    h.push_back(val); // store the random value in the vector
+  }
+  return h;
+}
+  
+// compute hash as the projection (escalar product) of all features onto a random direction. The direction has to be 
+// the same for the ref. image and for all the candidate images. 
+vector<double> hash_matching::StereoProperties::ComputeProjections(Mat desc, uint seed)
+{
+  vector<double> hash6;
+  double vectorial_product=0.0;
+  int sizer=desc.rows; // number of rows
+  int sizec=desc.cols; // number of columns 
+  // Compute the random values
+  vector<float> random_vector; // index on hash table 1 
+  
+  random_vector=compute_unitary_random_vector(seed, sizer);
+  
+  for (int i=0;i<sizec;i++) // for each column take it as a vector, for all columns (128 or 64 SIFT or SURF)
+  {
+    vectorial_product=0;
+    for (int m=0;m<sizer;m++)
+    {// compute escalar product as the projection.
+    vectorial_product = vectorial_product + (double)(random_vector[m]*desc.at<float>(m, i));
+    hash6.push_back(vectorial_product);
+    }
+
+    //ROS_INFO_STREAM("projection" << vectorial_product);
+
+    hash6_.push_back(vectorial_product);
+  }
+  return hash6;
+}
 
 /** \brief Computes the feature-based hash
  */
@@ -203,6 +248,7 @@ void hash_matching::StereoProperties::computeHash()
   hash3_.clear();
   hash4_.clear();
   hash5_.clear();
+  
 
   // Set the number of hyperplanes
   int d = params_.num_hyperplanes;
