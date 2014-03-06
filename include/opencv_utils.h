@@ -250,10 +250,10 @@ public:
     for (int i=0; i<bucket_cols*bucket_rows; i++)
     {
       // Sort keypoints by response
-      //sort(buckets[i].begin(), buckets[i].end(), hash_matching::OpencvUtils::sortKpByResponse);
+      sort(buckets[i].begin(), buckets[i].end(), hash_matching::OpencvUtils::sortKpByResponse);
 
       // shuffle bucket indices randomly
-      random_shuffle(buckets[i].begin(),buckets[i].end());
+      //random_shuffle(buckets[i].begin(),buckets[i].end());
       
       // Add up to max_features features from this bucket to output
       int k=0;

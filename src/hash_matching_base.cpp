@@ -15,16 +15,17 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   ros::NodeHandle nh, ros::NodeHandle nhp) : nh_(nh), nh_private_(nhp)
 {
   // Load parameters
-  string ref_path, img_dir, desc_type, files_path;
+  string ref_path, img_dir, desc_type, files_path, output_file;
   double desc_thresh;
-  int max_features, best_n;
+  int best_n, proj_num;
+  nh_private_.param("files_path", files_path, std::string("/home/user"));
   nh_private_.param("ref_path", ref_path, std::string(""));
   nh_private_.param("img_dir", img_dir, std::string(""));
+  nh_private_.param("output_file", output_file, std::string(""));
   nh_private_.param("desc_type", desc_type, std::string("SIFT"));
   nh_private_.getParam("desc_thresh", desc_thresh);
   nh_private_.getParam("best_n", best_n);
-  nh_private_.getParam("max_features", max_features);
-  nh_private_.param("files_path", files_path, std::string("/home/user"));
+  nh_private_.getParam("proj_num", proj_num);
 
   // Files path sanity check
   if (files_path[files_path.length()-1] != '/')
@@ -60,15 +61,10 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   // Read the template image and extract kp and descriptors
   Mat img_temp = imread(ref_path, CV_LOAD_IMAGE_COLOR);
   ref_prop.setImage(img_temp);
-  ROS_INFO_STREAM("Reference Keypoints Size: " << ref_prop.getKp().size());
+  ROS_INFO_STREAM("REF: " << ref_prop.getKp().size());
 
   // Compute the reference hash
-  if(!hash_obj.initialize(ref_prop.getDesc(), max_features))
-  {
-    ROS_ERROR("[HashMatchingBase:] Impossible to initialize the hyperplanes!");
-    return;
-  }
-
+  hash_obj.initialize(ref_prop.getDesc(), proj_num);
   vector<float> ref_hash = hash_obj.computeHash(ref_prop.getDesc());
 
   // Loop directory images
@@ -120,7 +116,8 @@ hash_matching::HashMatchingBase::HashMatchingBase(
       {
         // Log
         ROS_INFO_STREAM(it->path().filename().string() << " -> Hash: " <<
-          matching << "\t | Desc. Matches: " << (int)matches.size());
+          matching << "\t | Desc. Matches: " << (int)matches.size() <<
+          " | Desc. Size: " << cur_prop.getKp().size());
 
         output_csv << matching << "," << matches.size() << endl;
 
@@ -134,7 +131,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
 
   // Save data into file
   string out_file;
-  out_file = files_path + "output.txt";
+  out_file = files_path + output_file;
   fstream f_out(out_file.c_str(), ios::out | ios::trunc);
   f_out << output_csv.str();
   f_out.close();

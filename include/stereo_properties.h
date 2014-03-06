@@ -26,6 +26,14 @@ public:
 
     // Class parameters
     string desc_type;               //!> Descriptor type can be: SIFT or SURF.
+    int bucket_width;               //!> Bucket width.
+    int bucket_height;              //!> Bucket height.
+    int bucket_max;                 //!> Maximum number the features per bucket.
+
+    // Default values
+    static const int            DEFAULT_BUCKET_WIDTH = 30;
+    static const int            DEFAULT_BUCKET_HEIGHT = 30;
+    static const int            DEFAULT_BUCKET_MAX = 10;
   };
 
   // Set the parameter struct
