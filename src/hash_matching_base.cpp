@@ -193,6 +193,9 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   for(int i=0; i<best_n; i++)
     ROS_INFO_STREAM("BEST MATCHING HASH 3: " << dists_3[i].image << ": " << dists_3[i].hash_matching << " (" << dists_3[i].feature_matchings << ")");
   ROS_INFO("###################################################");
+
+  // Close the node
+  ros::shutdown();
 }
 
 // Hash matching functions
