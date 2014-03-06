@@ -5,10 +5,7 @@
 /** \brief Parameter constructor. Sets the parameter struct to default values.
   */
 hash_matching::StereoProperties::Params::Params() :
-  desc_type("SIFT"),
-  bucket_width(DEFAULT_BUCKET_WIDTH),
-  bucket_height(DEFAULT_BUCKET_HEIGHT),
-  bucket_max(DEFAULT_BUCKET_MAX)
+  desc_type("SIFT")
 {}
 
 /** \brief StereoProperties constructor
@@ -36,14 +33,7 @@ void hash_matching::StereoProperties::setImage(const Mat& img)
   // Extract keypoints
   desc_ = Mat_< vector<float> >();
   hash_matching::OpencvUtils::keypointDetector(img_, kp_, params_.desc_type);
-  
-  // Bucket keypoints
-  /*
-  kp_ = hash_matching::OpencvUtils::bucketKeypoints(kp_, 
-                                                    params_.bucket_width, 
-                                                    params_.bucket_height, 
-                                                    params_.bucket_max);
-  */
+
   // Extract descriptors
   hash_matching::OpencvUtils::descriptorExtraction(img_, kp_, desc_, params_.desc_type);
 }
