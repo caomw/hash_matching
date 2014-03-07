@@ -1,5 +1,5 @@
 #include "stereo_properties.h"
-#include "opencv_utils.h"
+#include "utils.h"
 #include <ros/ros.h>
 
 /** \brief Parameter constructor. Sets the parameter struct to default values.
@@ -32,8 +32,8 @@ void hash_matching::StereoProperties::setImage(const Mat& img)
 
   // Extract keypoints
   desc_ = Mat_< vector<float> >();
-  hash_matching::OpencvUtils::keypointDetector(img_, kp_, params_.desc_type);
+  hash_matching::Utils::keypointDetector(img_, kp_, params_.desc_type);
 
   // Extract descriptors
-  hash_matching::OpencvUtils::descriptorExtraction(img_, kp_, desc_, params_.desc_type);
+  hash_matching::Utils::descriptorExtraction(img_, kp_, desc_, params_.desc_type);
 }

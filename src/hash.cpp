@@ -1,5 +1,5 @@
 #include "hash.h"
-#include "opencv_utils.h"
+#include "utils.h"
 #include <ros/ros.h>
 #include <boost/filesystem.hpp>
 #include <iostream>
@@ -17,7 +17,11 @@ hash_matching::Hash::Params::Params() :
 // Hash constructor
 hash_matching::Hash::Hash()
 {
+  // Initializations
   num_hyperplanes_ = -1;
+  h1_size_ = -1;
+  h2_size_ = -1;
+  h3_size_ = -1;
 }
 
 // Sets the parameters
@@ -32,6 +36,23 @@ int hash_matching::Hash::getHyperplanes(){return num_hyperplanes_;}
 // Class initialization
 bool hash_matching::Hash::initialize(Mat desc)
 {
+  // Create the random vectors 
+  int seed = time(NULL);
+  for (uint i=0; i<params_.proj_num; i++)
+  {
+    vector<float> r = compute_random_vector(seed + i, 6*desc.rows);
+    r_.push_back(r);
+  }
+
+  // Setup the size of hashes. The size of hash 1 is computed in the initialization
+  h1_size_ = 1;
+  h2_size_ = params_.n_levels;
+  h3_size_ = params_.proj_num * desc.cols;
+
+  // Get the descriptors type: hyperplanes can only be generated with descriptors of type 32FC1
+  string type = hash_matching::Utils::matType2str(desc.type());
+  if (type != "32FC1") return true;
+
   // Try to build the hyperplanes
   int max_hyperplanes = 20;
   bool init_done = false;
@@ -50,14 +71,6 @@ bool hash_matching::Hash::initialize(Mat desc)
     ROS_ERROR("[Hash:] Impossible to find a correct number of hyperplanes!");
   else
     ROS_INFO_STREAM("[Hash:] Initialization finishes with " << num_hyperplanes_ << " hyperplanes.");
-
-  // Create the random vectors 
-  int seed = time(NULL);
-  for (uint i=0; i<params_.proj_num; i++)
-  {
-    vector<float> r = compute_random_vector(seed + i, 3*desc.rows);
-    r_.push_back(r);
-  }
 
   return init_done;
 }
@@ -84,6 +97,9 @@ bool hash_matching::Hash::initializeHyperplanes(Mat desc, int &region_size)
   // Compute the regions
   vector< vector<int> > hash_idx = computeRegions(desc, H_, delta_);
 
+  // Setup the size of hash 1
+  h1_size_ = comb_.size()^2;
+
   // Compute the hyperplanes for every region
   region_size = -1;
   int seed = time(NULL);
@@ -95,7 +111,7 @@ bool hash_matching::Hash::initializeHyperplanes(Mat desc, int &region_size)
     for (uint n=0; n<indices.size(); n++)
       region_desc.push_back(desc.row(indices[n]));
 
-    // Detect regions with to many descriptors
+    // Detect regions with no descriptors
     if(region_desc.rows <= 0)
     {
       region_size = region_desc.rows;
@@ -221,11 +237,11 @@ vector< vector<int> > hash_matching::Hash::computeRegions(Mat desc,
 
   // Sanity check
   if (H.size() < 1) {
-    //ROS_ERROR("[Hash:] No hyperplanes received!");
+    ROS_ERROR("[Hash:] No hyperplanes received!");
     return hash_idx;
   }
   if (H[0].size() < 1) {
-    //ROS_ERROR("[Hash:] At least, one hyperplane is empty!");
+    ROS_ERROR("[Hash:] At least, one hyperplane is empty!");
     return hash_idx;
   }
 
@@ -265,21 +281,27 @@ vector< vector<int> > hash_matching::Hash::computeRegions(Mat desc,
 // Compute the hash of the hyperplanes
 vector<uint> hash_matching::Hash::getHash1(Mat desc)
 {
-  // Initialize hash
-  vector<uint> hash;
+  // Initialize the hash with 0's
+  vector<uint> hash(h1_size_, 0);
+
+  // Get the descriptors type: hyperplanes can only be generated with descriptors of type 32FC1
+  string type = hash_matching::Utils::matType2str(desc.type());
+  if (type != "32FC1" || desc.rows == 0) return hash;
 
   // Compute the regions
   vector< vector<int> > hash_idx = computeRegions(desc, H_, delta_);
 
   // Iterate over major retions
+  uint n = 0;
   for (uint i=0; i<hash_idx.size(); i++)
   {
     // Get the descriptors for this region
     vector<int> indices = hash_idx[i];
     Mat region_desc;
-    for (uint n=0; n<indices.size(); n++)
-      region_desc.push_back(desc.row(indices[n]));
+    for (uint j=0; j<indices.size(); j++)
+      region_desc.push_back(desc.row(indices[j]));
 
+    // Compute the sub-regions
     vector< vector<int> > sub_hash_idx = computeRegions(region_desc, sub_H_[i], sub_delta_[i]);
 
     // Iterate over sub-regions
@@ -287,7 +309,8 @@ vector<uint> hash_matching::Hash::getHash1(Mat desc)
     {
       // Count the descriptors for this subregion
       vector<int> sub_indices = sub_hash_idx[j];
-      hash.push_back(sub_indices.size());
+      hash[n] = sub_indices.size();
+      n++;
     }
     // Clear
     region_desc.release();
@@ -299,40 +322,57 @@ vector<uint> hash_matching::Hash::getHash1(Mat desc)
 // Compute the hash of the feature quantization hystogram
 vector<uint> hash_matching::Hash::getHash2(Mat desc)
 {
+  // Initialize the hash with 0's
+  vector<uint> hash(h2_size_, 0);
+
+  // Sanity check
+  if (desc.rows == 0) return hash;
+
+  // Convert descriptors if needed
+  string type = hash_matching::Utils::matType2str(desc.type());
+  if (type != "32FC1") desc.convertTo(desc, CV_32F);
+
   // Initializations
   double quantification_interval = params_.features_max_value/params_.n_levels;
   int level, integer_part = 0;
 
-  // initialize the hystogram with 0's
-  vector<uint> hash(params_.n_levels, 0);  
-
   for(int m=0; m<desc.rows; m++)
   {
     for(int n=0; n<desc.cols; n++)
+    {
+      float resto = fmodf(desc.at<float>(m, n), (float)quantification_interval);
+      integer_part = (int)(desc.at<float>(m, n)/(float)quantification_interval);
+      if (resto>0)
       {
-        float resto = fmodf(desc.at<float>(m, n), (float)quantification_interval);
-        integer_part = (int)(desc.at<float>(m, n)/(float)quantification_interval);
-        if (resto>0)
-        {
-          level = integer_part+1;
-          hash[level]++;
-        }
-        else 
-        {
-          level = integer_part;
-          hash[level]++;
-        }
+        level = integer_part+1;
+        hash[level]++;
       }
+      else 
+      {
+        level = integer_part;
+        hash[level]++;
+      }
+    }
   }
-  
+
   return hash;
 }
 
 // Compute the hash of descriptor projections
 vector<float> hash_matching::Hash::getHash3(Mat desc)
 {
+  // initialize the hystogram with 0's
+  vector<float> hash(h3_size_, 0.0);
+
+  // Sanity check
+  if (desc.rows == 0) return hash;
+
+  // Convert descriptors if needed
+  string type = hash_matching::Utils::matType2str(desc.type());
+  if (type != "32FC1") desc.convertTo(desc, CV_32F);
+
   // Project the descriptors
-  vector<float> h;
+  uint k = 0;
   for (uint i=0; i<r_.size(); i++)
   {
     for (int n=0; n<desc.cols; n++)
@@ -342,10 +382,12 @@ vector<float> hash_matching::Hash::getHash3(Mat desc)
       {
         desc_sum += r_[i][m]*desc.at<float>(m, n);
       }
-      h.push_back(desc_sum);
+      hash[k] = desc_sum;
+      k++;
     }
   }
-  return h;
+
+  return hash;
 }
 
 // Computes a random vector of some size

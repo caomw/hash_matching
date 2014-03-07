@@ -1,15 +1,16 @@
-#include "hash_matching_base.h"
-#include "stereo_properties.h"
-#include "opencv_utils.h"
-#include "hash.h"
+#include <ros/package.h>
 #include <boost/shared_ptr.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
 #include <iostream>
+#include <stdlib.h>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <boost/filesystem.hpp>
+#include "hash_matching_base.h"
+#include "stereo_properties.h"
+#include "hash.h"
 
 namespace fs=boost::filesystem;
 
@@ -131,7 +132,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
       vector<DMatch> matches;
       Mat match_mask;
       ros::WallTime start_time_desc = ros::WallTime::now();
-      hash_matching::OpencvUtils::crossCheckThresholdMatching(ref_prop.getDesc(), 
+      hash_matching::Utils::crossCheckThresholdMatching(ref_prop.getDesc(), 
                                                               cur_prop.getDesc(), 
                                                               desc_thresh, 
                                                               match_mask, matches);
@@ -178,9 +179,9 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   f_out.close();
 
   // Sort distances vector
-  sort(dists_1.begin(), dists_1.end(), hash_matching::OpencvUtils::sortTrioByDistance);
-  sort(dists_2.begin(), dists_2.end(), hash_matching::OpencvUtils::sortTrioByDistance);
-  sort(dists_3.begin(), dists_3.end(), hash_matching::OpencvUtils::sortTrioByDistance);
+  sort(dists_1.begin(), dists_1.end(), hash_matching::Utils::sortTrioByDistance);
+  sort(dists_2.begin(), dists_2.end(), hash_matching::Utils::sortTrioByDistance);
+  sort(dists_3.begin(), dists_3.end(), hash_matching::Utils::sortTrioByDistance);
 
   // Show result
   ROS_INFO("###################################################");
@@ -193,6 +194,10 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   for(int i=0; i<best_n; i++)
     ROS_INFO_STREAM("BEST MATCHING HASH 3: " << dists_3[i].image << ": " << dists_3[i].hash_matching << " (" << dists_3[i].feature_matchings << ")");
   ROS_INFO("###################################################");
+
+  // Draw the output
+  string command = std::string("python ") + ros::package::getPath(ROS_PACKAGE_NAME) + std::string("/scripts/plot_results.py ") + out_file;
+  ROS_INFO_STREAM("Viewer output: " << system(command.c_str()));
 
   // Close the node
   ros::shutdown();

@@ -4,7 +4,7 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "hash_matching_base.h"
-#include "opencv_utils.h"
+#include "utils.h"
 #include <Eigen/Eigen>
 
 using namespace std;
@@ -89,6 +89,9 @@ private:
   vector< vector<float> > sub_delta_;       //!> Save the sub-region deltas  
   int num_hyperplanes_;                     //!> Number of hyperplanes
   vector< vector<float> > r_;               //!> Vector of random values
+  int h1_size_;                             //!> Size of the hash 1
+  int h2_size_;                             //!> Size of the hash 2
+  int h3_size_;                             //!> Size of the hash 3
 };
 
 } // namespace
