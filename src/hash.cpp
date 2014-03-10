@@ -95,10 +95,10 @@ bool hash_matching::Hash::initializeHyperplanes(Mat desc, int &region_size)
   delta_ = delta;
 
   // Compute the regions
-  vector< vector<int> > hash_idx = computeRegions(desc, H_, delta_);
+  vector< vector<uint> > reg_idx = computeRegions(desc, H_, delta_);
 
   // Setup the size of hash 1
-  h1_size_ = comb_.size()^2;
+  h1_size_ = int(pow(comb_.size(), 2.0));
 
   // Compute the hyperplanes for every region
   region_size = -1;
@@ -106,7 +106,7 @@ bool hash_matching::Hash::initializeHyperplanes(Mat desc, int &region_size)
   for (uint i=0; i<comb_.size(); i++)
   {
     // Get the descriptors for this subregion
-    vector<int> indices = hash_idx[i];
+    vector<uint> indices = reg_idx[i];
     Mat region_desc;
     for (uint n=0; n<indices.size(); n++)
       region_desc.push_back(desc.row(indices[n]));
@@ -223,36 +223,33 @@ void hash_matching::Hash::computeHyperplanes(Mat desc,
   }
 }
 
-vector< vector<int> > hash_matching::Hash::computeRegions(Mat desc,
+vector< vector<uint> > hash_matching::Hash::computeRegions(Mat desc,
                                                           vector< vector<float> > H, 
                                                           vector<float> delta)
 {
   // Initialize the hash indices table
-  vector< vector<int> > hash_idx;
+  vector< vector<uint> > reg_idx;
   for (uint i=0; i<comb_.size(); i++)
   {
-    vector<int> t;
-    hash_idx.push_back(t);
+    vector<uint> t;
+    reg_idx.push_back(t);
   }
 
   // Sanity check
   if (H.size() < 1) {
     ROS_ERROR("[Hash:] No hyperplanes received!");
-    return hash_idx;
+    return reg_idx;
   }
   if (H[0].size() < 1) {
     ROS_ERROR("[Hash:] At least, one hyperplane is empty!");
-    return hash_idx;
+    return reg_idx;
   }
-
-  // Set the number of hyperplanes
-  int d = num_hyperplanes_;
 
   // Compute the hash
   for(int i=0; i<desc.rows; i++)
   {
     string bin = "";
-    for (int n=0; n<d; n++)
+    for (int n=0; n<num_hyperplanes_; n++)
     {
       float v = 0.0;
       for(int m=0; m<desc.cols; m++)
@@ -269,13 +266,15 @@ vector< vector<int> > hash_matching::Hash::computeRegions(Mat desc,
     int pos = find(comb_.begin(), comb_.end(), bin) - comb_.begin();
 
     // Update hash indices table
-    vector<int> t;
-    if (hash_idx[pos].size() != 0)
-      t = hash_idx[pos];
-    t.push_back(i);
-    hash_idx[pos] = t;
+    vector<uint> t;
+    if (reg_idx[pos].size() != 0)
+      t = reg_idx[pos];
+    t.push_back((uint)i);
+    reg_idx[pos] = t;
+
   }
-  return hash_idx;
+
+  return reg_idx;
 }
 
 // Compute the hash of the hyperplanes
@@ -289,27 +288,26 @@ vector<uint> hash_matching::Hash::getHash1(Mat desc)
   if (type != "32FC1" || desc.rows == 0) return hash;
 
   // Compute the regions
-  vector< vector<int> > hash_idx = computeRegions(desc, H_, delta_);
+  vector< vector<uint> > reg_idx = computeRegions(desc, H_, delta_);
 
   // Iterate over major retions
   uint n = 0;
-  for (uint i=0; i<hash_idx.size(); i++)
+  for (uint i=0; i<reg_idx.size(); i++)
   {
     // Get the descriptors for this region
-    vector<int> indices = hash_idx[i];
+    vector<uint> indices = reg_idx[i];
     Mat region_desc;
     for (uint j=0; j<indices.size(); j++)
       region_desc.push_back(desc.row(indices[j]));
 
     // Compute the sub-regions
-    vector< vector<int> > sub_hash_idx = computeRegions(region_desc, sub_H_[i], sub_delta_[i]);
+    vector< vector<uint> > sub_reg_idx = computeRegions(region_desc, sub_H_[i], sub_delta_[i]);
 
     // Iterate over sub-regions
-    for (uint j=0; j<sub_hash_idx.size(); j++)
+    for (uint j=0; j<sub_reg_idx.size(); j++)
     {
       // Count the descriptors for this subregion
-      vector<int> sub_indices = sub_hash_idx[j];
-      hash[n] = sub_indices.size();
+      hash[n] = (uint)sub_reg_idx[j].size();
       n++;
     }
     // Clear
@@ -324,6 +322,9 @@ vector<uint> hash_matching::Hash::getHash2(Mat desc)
 {
   // Initialize the hash with 0's
   vector<uint> hash(h2_size_, 0);
+  return hash;
+
+  /*
 
   // Get the descriptors type: the feature histogram can only be generated with descriptors of type 32FC1
   string type = hash_matching::Utils::matType2str(desc.type());
@@ -353,6 +354,7 @@ vector<uint> hash_matching::Hash::getHash2(Mat desc)
   }
 
   return hash;
+  */
 }
 
 // Compute the hash of descriptor projections

@@ -71,7 +71,7 @@ private:
                           vector<float>& delta);
 
   // Divide descriptors by region
-  vector< vector<int> > computeRegions(Mat desc,
+  vector< vector<uint> > computeRegions(Mat desc,
                                        vector< vector<float> > H, 
                                        vector<float> delta);
 
