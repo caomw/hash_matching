@@ -325,12 +325,9 @@ vector<uint> hash_matching::Hash::getHash2(Mat desc)
   // Initialize the hash with 0's
   vector<uint> hash(h2_size_, 0);
 
-  // Sanity check
-  if (desc.rows == 0) return hash;
-
-  // Convert descriptors if needed
+  // Get the descriptors type: the feature histogram can only be generated with descriptors of type 32FC1
   string type = hash_matching::Utils::matType2str(desc.type());
-  if (type != "32FC1") desc.convertTo(desc, CV_32F);
+  if (type != "32FC1" || desc.rows == 0) return hash;
 
   // Initializations
   double quantification_interval = params_.features_max_value/params_.n_levels;

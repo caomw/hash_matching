@@ -20,11 +20,13 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   // Load parameters
   string ref_path, img_dir, desc_type, files_path;
   double desc_thresh;
+  bool plot_results;
   int best_n, proj_num, features_max_value, n_levels;
   nh_private_.param("files_path", files_path, std::string("/home/user"));
   nh_private_.param("ref_path", ref_path, std::string(""));
   nh_private_.param("img_dir", img_dir, std::string(""));
   nh_private_.param("desc_type", desc_type, std::string("SIFT"));
+  nh_private_.param("plot_results", plot_results, false);
   nh_private_.getParam("desc_thresh", desc_thresh);
   nh_private_.getParam("best_n", best_n);
   nh_private_.getParam("proj_num", proj_num);
@@ -196,8 +198,11 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   ROS_INFO("###################################################");
 
   // Draw the output
-  string command = std::string("python ") + ros::package::getPath(ROS_PACKAGE_NAME) + std::string("/scripts/plot_results.py ") + out_file;
-  ROS_INFO_STREAM("Viewer output: " << system(command.c_str()));
+  if (plot_results)
+  {
+    string command = std::string("python ") + ros::package::getPath(ROS_PACKAGE_NAME) + std::string("/scripts/plot_results.py ") + out_file;
+    ROS_INFO_STREAM("Viewer output: " << system(command.c_str()));
+  }
 
   // Close the node
   ros::shutdown();
