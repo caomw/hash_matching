@@ -11,6 +11,7 @@
 hash_matching::Hash::Params::Params() :
   proj_num(DEFAULT_PROJ_NUM),
   features_max_value(DEFAULT_F_MAX_VALUE),
+  features_min_value(DEFAULT_F_MIN_VALUE),
   n_levels(DEFAULT_n_levels)
 {}
 
@@ -43,6 +44,9 @@ bool hash_matching::Hash::initialize(Mat desc)
     vector<float> r = compute_random_vector(seed + i, 6*desc.rows);
     r_.push_back(r);
   }
+
+  // For hash histogram
+  q_interval_ = (params_.features_max_value - params_.features_min_value)/(float)params_.n_levels;
 
   // Setup the size of hashes. The size of hash 1 is computed in the initialization
   h1_size_ = 1;
@@ -317,50 +321,36 @@ vector<uint> hash_matching::Hash::getHash1(Mat desc)
   return hash;
 }
 
-// Compute the hash of the feature quantization hystogram
+// Compute the hash of the feature quantization histogram
 vector<uint> hash_matching::Hash::getHash2(Mat desc)
 {
   // Initialize the hash with 0's
   vector<uint> hash(h2_size_, 0);
-  return hash;
-
-  /*
 
   // Get the descriptors type: the feature histogram can only be generated with descriptors of type 32FC1
   string type = hash_matching::Utils::matType2str(desc.type());
   if (type != "32FC1" || desc.rows == 0) return hash;
 
-  // Initializations
-  double quantification_interval = params_.features_max_value/params_.n_levels;
-  int level, integer_part = 0;
-
   for(int m=0; m<desc.rows; m++)
   {
     for(int n=0; n<desc.cols; n++)
     {
-      float resto = fmodf(desc.at<float>(m, n), (float)quantification_interval);
-      integer_part = (int)(desc.at<float>(m, n)/(float)quantification_interval);
-      if (resto>0)
-      {
-        level = integer_part+1;
-        hash[level]++;
-      }
+      float resto = fmodf(desc.at<float>(m, n), q_interval_);
+      int integer_part = (int)( ( (desc.at<float>(m, n) - params_.features_min_value) / q_interval_ ) + 0.5 );
+
+      if (resto > 0.0)
+        hash[integer_part+1]++;
       else 
-      {
-        level = integer_part;
-        hash[level]++;
-      }
+        hash[integer_part]++;
     }
   }
-
   return hash;
-  */
 }
 
 // Compute the hash of descriptor projections
 vector<float> hash_matching::Hash::getHash3(Mat desc)
 {
-  // initialize the hystogram with 0's
+  // initialize the histogram with 0's
   vector<float> hash(h3_size_, 0.0);
 
   // Sanity check

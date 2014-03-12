@@ -2,18 +2,18 @@
 
 	<node pkg="hash_matching" type="hash_matching" name="hash_matching" output="screen">
 
+		<param name="files_path" value="$(find hash_matching)/data/" />
 		<param name="ref_path" value="your_ref_image.png" />
 		<param name="img_dir" value="your_directory" />
-		<param name="files_path" value="$(find hash_matching)/data/" />
 
-		<param name="best_n" value="8" />
-		<param name="desc_type" value="SIFT" />
+		<param name="desc_type" value="SIFT" /> <!-- Can be SIFT, SURT of ORB -->
 		<param name="desc_thresh" value="0.8" />
-		<param name="num_hyperplanes" value="4" />
+		<param name="best_n" value="10" />
 
-		<param name="bucket_width" value="70" />
-		<param name="bucket_height" value="70" />
-		<param name="bucket_max" value="5" />
+		<param name="proj_num" value="1" />
+		<param name="n_levels" value="64" />
+
+		<param name="plot_results" value="true" />
 
 	</node>
 

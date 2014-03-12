@@ -8,6 +8,7 @@
 #include <sstream>
 #include <string>
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
 #include "hash_matching_base.h"
 #include "stereo_properties.h"
 #include "hash.h"
@@ -21,7 +22,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   string ref_path, img_dir, desc_type, files_path;
   double desc_thresh;
   bool plot_results;
-  int best_n, proj_num, features_max_value, n_levels;
+  int best_n, proj_num, n_levels;
   nh_private_.param("files_path", files_path, std::string("/home/user"));
   nh_private_.param("ref_path", ref_path, std::string(""));
   nh_private_.param("img_dir", img_dir, std::string(""));
@@ -30,7 +31,6 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   nh_private_.getParam("desc_thresh", desc_thresh);
   nh_private_.getParam("best_n", best_n);
   nh_private_.getParam("proj_num", proj_num);
-  nh_private_.getParam("features_max_value", features_max_value);
   nh_private_.getParam("n_levels", n_levels);
 
   // Files path sanity check
@@ -56,6 +56,28 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   string ref_img_fn = ref_img_path.filename().string();
   string ref_image_name = ref_img_fn.substr(0, ref_img_fn.find_last_of("."));
 
+  // The feature min/max value depends on the type of descriptor
+  float features_max_value, features_min_value;
+  if (boost::iequals(desc_type, "sift"))
+  {
+    features_max_value = 255.0;
+    features_min_value = 0.0;
+  }
+  else if (boost::iequals(desc_type, "surf"))
+  {
+    features_max_value = 1.0;
+    features_min_value = -1.0;
+  }
+  else if (boost::iequals(desc_type, "orb"))
+  {
+    features_max_value = 1.0;
+    features_min_value = 0.0;
+  }
+  else
+  {
+    ROS_ERROR("[HashMatching: ] Descriptor type must be: SIFT, SURF or ORB!");
+  }
+
   // Initialize image properties
   StereoProperties ref_prop, cur_prop;
   hash_matching::StereoProperties::Params image_params;
@@ -68,6 +90,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   hash_matching::Hash::Params hash_params;
   hash_params.proj_num = proj_num;
   hash_params.features_max_value = features_max_value;
+  hash_params.features_min_value = features_min_value;
   hash_params.n_levels = n_levels;
   hash_obj.setParams(hash_params);
 
@@ -154,8 +177,8 @@ hash_matching::HashMatchingBase::HashMatchingBase(
       time_hash_3 = time_hash_3 + (ros::WallTime::now() - st_hash_3);
 
       // Log
-      ROS_INFO_STREAM(rawname << " -> Hash: " <<
-        matching_1 << " | " << matching_2 << " | " << matching_3 << " | Desc. Matches: " << (int)matches.size());
+      ROS_INFO_STREAM(rawname << " -> (" << (int)matches.size() << "): " <<
+                    matching_1 << " | " << matching_2 << " | " << matching_3);
       output_csv << ref_image_name << "," << rawname << "," << matches.size() <<
                     "," << matching_1 << "," << matching_2 << "," << matching_3 <<
                     "," << time_hash_1.toSec() << "," << time_hash_2.toSec() <<
@@ -228,7 +251,7 @@ uint hash_matching::HashMatchingBase::match(vector<uint> hash_1, vector<uint> ha
   // Compute the distance
   uint sum = 0;
   for (uint i=0; i<hash_1.size(); i++)
-    sum += abs(hash_1[i] - hash_2[i]);
+    sum += (uint)abs((int)hash_1[i] - (int)hash_2[i]);
 
   return sum;
 }

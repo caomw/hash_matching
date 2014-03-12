@@ -28,13 +28,15 @@ public:
 
     // Class parameters
     int proj_num;                   //!> Number of projections required
-    double features_max_value;      //!> maximum value for the feature components; for SIFT is 255.
-    double n_levels;                //!> number of levels for the feature component value discretization
+    float features_max_value;       //!> maximum value for the feature components; for SIFT is 255.
+    float features_min_value;       //!> maximum value for the feature components; for SIFT is 0.
+    int n_levels;                   //!> number of levels for the feature component value discretization
 
     // Default values
     static const int              DEFAULT_PROJ_NUM = 5;
-    static const double           DEFAULT_F_MAX_VALUE = 255.0;
-    static const double           DEFAULT_n_levels = 128.0;
+    static const float            DEFAULT_F_MAX_VALUE = 255.0;
+    static const float            DEFAULT_F_MIN_VALUE = 0.0;
+    static const int              DEFAULT_n_levels = 64;
   };
 
   // Set the parameter struct
@@ -92,6 +94,7 @@ private:
   int h1_size_;                             //!> Size of the hash 1
   int h2_size_;                             //!> Size of the hash 2
   int h3_size_;                             //!> Size of the hash 3
+  float q_interval_;                        //!> Quantification interval for hash 2 (histogram)
 };
 
 } // namespace
