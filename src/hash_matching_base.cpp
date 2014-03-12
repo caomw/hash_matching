@@ -221,7 +221,6 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   ROS_INFO("###################################################");
 
   // Draw the output
-  ROS_INFO_STREAM("KK: " << plot_results);
   if (plot_results)
   {
     string command = std::string("python ") + ros::package::getPath(ROS_PACKAGE_NAME) + std::string("/scripts/plot_results.py ") + out_file;

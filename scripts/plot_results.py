@@ -42,16 +42,26 @@ if __name__ == "__main__":
   h2 = normalize_vector(data[:,2])
   h3 = normalize_vector(data[:,3])
 
-  # Init figure
-  fig1 = pylab.figure()
-  ax = fig1.gca()
-  ax.grid(True)
+  # Figure
+  f, (ax1, ax2, ax3) = pyplot.subplots(3, sharex=True, sharey=True)
+  ax1.plot(h1, matches, 'b', marker='o', ls='', label='Hyperplanes')
+  ax1.set_title("Hash Matching vs Descriptor Matching")
+  ax1.set_ylabel("Descriptor Matching")
+  ax1.grid(True)
+  ax1.legend()
 
-  ax.set_title("Hash Matching vs Descriptor Matching")
-  ax.set_xlabel("Hash Matching")
-  ax.set_ylabel("Descriptor Matching")
-  ax.plot(h1, matches, 'b', marker='o', ls='', label='Hyperplanes')
-  ax.plot(h2, matches, 'r', marker='o', ls='', label='Histogram')
-  ax.plot(h3, matches, 'g', marker='o', ls='', label='Projections')
-  ax.legend()
+  ax2.plot(h2, matches, 'r', marker='o', ls='', label='Histogram')
+  ax2.grid(True)
+  ax2.legend()
+
+  ax3.plot(h3, matches, 'g', marker='o', ls='', label='Projections')
+  ax3.set_xlabel("Hash Matching")
+  ax3.grid(True)
+  ax3.legend()
+
+  # Fine-tune figure; make subplots close to each other and hide x ticks for
+  # all but bottom plot.
+  f.subplots_adjust(hspace=0)
+  pyplot.setp([a.get_xticklabels() for a in f.axes[:-1]], visible=False)
+
   pylab.show()

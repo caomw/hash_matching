@@ -80,6 +80,9 @@ private:
   // Compute a random vector
   vector<float> compute_random_vector(uint seed, int size);
 
+  // Compute a vector orthogonal to another
+  vector<float> compute_orthogonal_vector(uint seed, vector<float> v_ort);
+
   // Stores parameters
   Params params_;
 

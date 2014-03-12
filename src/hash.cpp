@@ -38,10 +38,12 @@ int hash_matching::Hash::getHyperplanes(){return num_hyperplanes_;}
 bool hash_matching::Hash::initialize(Mat desc)
 {
   // Create the random vectors 
+  int size = 6*desc.rows;
   int seed = time(NULL);
+  vector<float> r1 = compute_random_vector(seed, size);
   for (uint i=0; i<params_.proj_num; i++)
   {
-    vector<float> r = compute_random_vector(seed + i, 6*desc.rows);
+    vector<float> r = compute_orthogonal_vector(seed+i+1, r1);
     r_.push_back(r);
   }
 
@@ -385,6 +387,26 @@ vector<float> hash_matching::Hash::compute_random_vector(uint seed, int size)
   srand(seed);
   vector<float> h;
   for (int i=0; i<size; i++)
-    h.push_back( ((float) rand() / (RAND_MAX)) );
+    h.push_back( (float)rand()/RAND_MAX );
+  return h;
+}
+
+// Computes an orthogonal vector
+vector<float> hash_matching::Hash::compute_orthogonal_vector(uint seed, vector<float> v_ort)
+{
+  srand(seed);
+  vector<float> h;
+  float sum = 0.0;
+  for (int i=0; i<v_ort.size()-1; i++)
+  {
+    float val = (float)rand()/RAND_MAX;
+    h.push_back(val);
+    sum += val*v_ort[i];
+  }
+
+  // Independent term
+  float d = -sum/v_ort[v_ort.size()-1];
+  h.push_back(d);
+
   return h;
 }
