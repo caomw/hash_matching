@@ -6,6 +6,7 @@
 #include <fstream>
 #include <opencv2/core/eigen.hpp>
 
+
 /** \brief Parameter constructor. Sets the parameter struct to default values.
   */
 hash_matching::Hash::Params::Params() :
@@ -35,17 +36,10 @@ void hash_matching::Hash::setParams(const Params& params)
 int hash_matching::Hash::getHyperplanes(){return num_hyperplanes_;}
 
 // Class initialization
-bool hash_matching::Hash::initialize(Mat desc)
+bool hash_matching::Hash::init(Mat desc, bool proj_orthogonal)
 {
-  // Create the random vectors 
-  int size = 6*desc.rows;
-  int seed = time(NULL);
-  vector<float> r1 = compute_random_vector(seed, size);
-  for (uint i=0; i<params_.proj_num; i++)
-  {
-    vector<float> r = compute_orthogonal_vector(seed+i+1, r1);
-    r_.push_back(r);
-  }
+  // Create the random projections vectors 
+  initProjections(desc.rows, proj_orthogonal);
 
   // For hash histogram
   q_interval_ = (params_.features_max_value - params_.features_min_value)/(float)params_.n_levels;
@@ -66,7 +60,7 @@ bool hash_matching::Hash::initialize(Mat desc)
   while(!init_done && num_hyperplanes_>1)
   {
     int region_size;
-    init_done = initializeHyperplanes(desc, region_size);
+    init_done = initHyperplanes(desc, region_size);
     ROS_INFO_STREAM("[Hash:] Initializing iteration with " << num_hyperplanes_ << " hyperplanes (" << region_size << "): " << init_done);
     num_hyperplanes_--;
   }
@@ -82,7 +76,7 @@ bool hash_matching::Hash::initialize(Mat desc)
 }
 
 // Hyperplanes initialization
-bool hash_matching::Hash::initializeHyperplanes(Mat desc, int &region_size)
+bool hash_matching::Hash::initHyperplanes(Mat desc, int &region_size)
 {
   // Initialize class properties
   H_.clear();
@@ -381,6 +375,78 @@ vector<float> hash_matching::Hash::getHash3(Mat desc)
   return hash;
 }
 
+void hash_matching::Hash::initProjections(int desc_size, bool orthogonal)
+{
+  // Initializations
+  int seed = time(NULL);
+  r_.clear();
+
+  // The size of the descriptors may vary... We multiply the current descriptor size 
+  // for a escalar to handle the larger cases.
+  int v_size = 6*desc_size;
+
+  if (orthogonal)
+  {
+    // We will generate N-orthogonal vectors creating a linear system of type Ax=b.
+
+    // Generate a first random vector
+    vector<float> r = compute_random_vector(seed, v_size);
+    r_.push_back(r);
+
+    // Generate the set of orthogonal vectors
+    for (uint i=1; i<params_.proj_num; i++)
+    {
+      // Generate a random vector of the correct size
+      vector<float> new_v = compute_random_vector(seed + i, v_size - i);
+
+      // Get the right terms (b)
+      VectorXf b(r_.size());
+      for (uint n=0; n<r_.size(); n++)
+      {
+        vector<float> cur_v = r_[n];
+        float sum = 0.0;
+        for (uint m=0; m<new_v.size(); m++)
+        {
+          sum += new_v[m]*cur_v[m];
+        }
+        b(n) = -sum;
+      }
+
+      // Get the matrix of equations (A)
+      MatrixXf A(i, i);
+      for (uint n=0; n<r_.size(); n++)
+      {
+        uint k=0;
+        for (uint m=r_[n].size()-i; m<r_[n].size(); m++)
+        {
+          A(n,k) = r_[n][m];
+          k++;
+        }
+      }
+
+      // Apply the solver
+      VectorXf x = A.colPivHouseholderQr().solve(b);
+
+      // Add the solutions to the new vector
+      for (uint n=0; n<r_.size(); n++)
+        new_v.push_back(x(n));
+
+      // Push the new vector
+      r_.push_back(new_v);
+    }
+  }
+  else
+  {
+    for (uint i=0; i<params_.proj_num; i++)
+    {
+      vector<float> r = compute_random_vector(seed + i, v_size);
+      r_.push_back(r);
+    }
+  }
+  
+  
+}
+
 // Computes a random vector of some size
 vector<float> hash_matching::Hash::compute_random_vector(uint seed, int size)
 {
@@ -388,25 +454,5 @@ vector<float> hash_matching::Hash::compute_random_vector(uint seed, int size)
   vector<float> h;
   for (int i=0; i<size; i++)
     h.push_back( (float)rand()/RAND_MAX );
-  return h;
-}
-
-// Computes an orthogonal vector
-vector<float> hash_matching::Hash::compute_orthogonal_vector(uint seed, vector<float> v_ort)
-{
-  srand(seed);
-  vector<float> h;
-  float sum = 0.0;
-  for (int i=0; i<v_ort.size()-1; i++)
-  {
-    float val = (float)rand()/RAND_MAX;
-    h.push_back(val);
-    sum += val*v_ort[i];
-  }
-
-  // Independent term
-  float d = -sum/v_ort[v_ort.size()-1];
-  h.push_back(d);
-
   return h;
 }

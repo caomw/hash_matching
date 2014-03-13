@@ -21,7 +21,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   // Load parameters
   string ref_path, img_dir, desc_type, files_path;
   double desc_thresh;
-  bool plot_results;
+  bool plot_results, proj_orthogonal;
   int best_n, proj_num, n_levels;
   nh_private_.param("files_path", files_path, std::string("/home/user"));
   nh_private_.param("ref_path", ref_path, std::string(""));
@@ -31,6 +31,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   nh_private_.getParam("desc_thresh", desc_thresh);
   nh_private_.getParam("best_n", best_n);
   nh_private_.getParam("proj_num", proj_num);
+  nh_private_.param("proj_orthogonal", proj_orthogonal, true);
   nh_private_.getParam("n_levels", n_levels);
 
   // Files path sanity check
@@ -99,7 +100,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   ref_prop.setImage(img_temp);
 
   // Compute the reference hash
-  hash_obj.initialize(ref_prop.getDesc());
+  hash_obj.init(ref_prop.getDesc(), proj_orthogonal);
   vector<uint> ref_hash_1 = hash_obj.getHash1(ref_prop.getDesc());
   vector<uint> ref_hash_2 = hash_obj.getHash2(ref_prop.getDesc());
   vector<float> ref_hash_3 = hash_obj.getHash3(ref_prop.getDesc());

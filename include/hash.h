@@ -6,9 +6,11 @@
 #include "hash_matching_base.h"
 #include "utils.h"
 #include <Eigen/Eigen>
+#include <Eigen/Dense>
 
 using namespace std;
 using namespace cv;
+using namespace Eigen;
 
 namespace hash_matching
 {
@@ -46,8 +48,7 @@ public:
   inline Params params() const { return params_; }
 
   // Initialize class
-  bool initialize(Mat desc);
-  bool initializeHyperplanes(Mat desc, int &region_size);
+  bool init(Mat desc, bool proj_orthogonal);
 
   // Compute the hash
   vector<uint> getHash1(Mat desc);
@@ -77,11 +78,14 @@ private:
                                        vector< vector<float> > H, 
                                        vector<float> delta);
 
+  // Init the number of hyperplanes
+  bool initHyperplanes(Mat desc, int &region_size);
+
+  // Init the random vectors for projections
+  void initProjections(int desc_size, bool orthogonal);
+
   // Compute a random vector
   vector<float> compute_random_vector(uint seed, int size);
-
-  // Compute a vector orthogonal to another
-  vector<float> compute_orthogonal_vector(uint seed, vector<float> v_ort);
 
   // Stores parameters
   Params params_;
