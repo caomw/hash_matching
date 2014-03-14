@@ -391,7 +391,7 @@ void hash_matching::Hash::initProjections(int desc_size, bool orthogonal)
 
     // Generate a first random vector
     vector<float> r = compute_random_vector(seed, v_size);
-    r_.push_back(r);
+    r_.push_back(unit_vector(r));
 
     // Generate the set of orthogonal vectors
     for (uint i=1; i<params_.proj_num; i++)
@@ -432,7 +432,7 @@ void hash_matching::Hash::initProjections(int desc_size, bool orthogonal)
         new_v.push_back(x(n));
 
       // Push the new vector
-      r_.push_back(new_v);
+      r_.push_back(unit_vector(new_v));
     }
   }
   else
@@ -440,7 +440,7 @@ void hash_matching::Hash::initProjections(int desc_size, bool orthogonal)
     for (uint i=0; i<params_.proj_num; i++)
     {
       vector<float> r = compute_random_vector(seed + i, v_size);
-      r_.push_back(r);
+      r_.push_back(unit_vector(r));
     }
   }
   
@@ -455,4 +455,20 @@ vector<float> hash_matching::Hash::compute_random_vector(uint seed, int size)
   for (int i=0; i<size; i++)
     h.push_back( (float)rand()/RAND_MAX );
   return h;
+}
+
+// Make a vector unit
+vector<float> hash_matching::Hash::unit_vector(vector<float> x)
+{
+  // Compute the norm
+  float sum = 0.0;
+  for (uint i=0; i<x.size(); i++)
+    sum += pow(x[i], 2.0);
+  float x_norm = sqrt(sum);
+
+  // x^ = x/|x|
+  for (uint i=0; i<x.size(); i++)
+    x[i] = x[i] / x_norm;
+
+  return x;
 }

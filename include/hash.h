@@ -87,6 +87,9 @@ private:
   // Compute a random vector
   vector<float> compute_random_vector(uint seed, int size);
 
+  // Make a vector unit
+  vector<float> unit_vector(vector<float> x);
+
   // Stores parameters
   Params params_;
 

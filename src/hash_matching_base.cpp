@@ -259,7 +259,7 @@ uint hash_matching::HashMatchingBase::match(vector<uint> hash_1, vector<uint> ha
 // Converts number to string
 template <typename T> string hash_matching::HashMatchingBase::toString( const T& n )
 {
-  ostringstream stm ;
-  stm << n ;
-  return stm.str() ;
+  ostringstream stm;
+  stm << n;
+  return stm.str();
 }
