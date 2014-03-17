@@ -56,6 +56,22 @@ def calc_match_percentage(h, matches, thresh, size):
   return np.array(matches_percentage)
 
 
+def get_axes(x, y):
+  "Build the axes for the barchart"
+
+  # Get the null indices
+  idx = []
+  for i in range(len(y)):
+    if (y[i] != 0):
+      idx.append(i)
+
+  idx = np.array(idx)
+  x = range(1, len(x[idx])+1)
+  y = y[idx]
+  return x, y
+
+
+
 if __name__ == "__main__":
   import argparse
   parser = argparse.ArgumentParser(
@@ -99,8 +115,16 @@ if __name__ == "__main__":
 
   # Generate the histogram bins
   bins = np.arange(0, len(matches), args.size);
-  width = 0.7 * (bins[1] - bins[0])
   center = (bins[:-1] + bins[1:]) / 2
+
+  x1, y1 = get_axes(center, mp_1)
+  x2, y2 = get_axes(center, mp_2)
+  x3, y3 = get_axes(center, mp_3)
+
+  # Get the width of every figure
+  w1 = 0.7 * (x1[1] - x1[0])
+  w2 = 0.7 * (x2[1] - x2[0])
+  w3 = 0.7 * (x3[1] - x3[0])
 
   # Figure
   f1, (ax11, ax12, ax13) = plt.subplots(1, 3, sharey=True)
@@ -124,25 +148,24 @@ if __name__ == "__main__":
   ax13.set_xlabel("Hash Matching")
   ax13.grid(True)
 
-
   # Figure
   f2, (ax21, ax22, ax23) = plt.subplots(1, 3, sharey=True)
 
   # Hash 1
-  ax21.bar(center, mp_1, align='center', width=width)
+  ax21.bar(x1, y1, align='center', width=w1)
   ax21.set_title(str(len(matches)) + " Samples (Hash Hyperplanes)")
   ax21.set_xlabel("Hash Matching")
   ax21.set_ylabel("Success percentage (%)")
   ax21.grid(True)
 
   # Hash 2
-  ax22.bar(center, mp_2, align='center', width=width)
+  ax22.bar(x2, y2, align='center', width=w2)
   ax22.set_title(str(len(matches)) + " Samples (Hash Hystogram)")
   ax22.set_xlabel("Hash Matching")
   ax22.grid(True)
 
   # Hash 3
-  ax23.bar(center, mp_3, align='center', width=width)
+  ax23.bar(x3, y3, align='center', width=w3)
   ax23.set_title(str(len(matches)) + " Samples (Hash Projections)")
   ax23.set_xlabel("Hash Matching")
   ax23.grid(True)
