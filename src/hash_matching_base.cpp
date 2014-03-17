@@ -27,12 +27,24 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   nh_private_.param("ref_path", ref_path, std::string(""));
   nh_private_.param("img_dir", img_dir, std::string(""));
   nh_private_.param("desc_type", desc_type, std::string("SIFT"));
-  nh_private_.param("plot_results", plot_results, false);
   nh_private_.getParam("desc_thresh", desc_thresh);
   nh_private_.getParam("best_n", best_n);
   nh_private_.getParam("proj_num", proj_num);
   nh_private_.param("proj_orthogonal", proj_orthogonal, true);
+  nh_private_.param("plot_results", plot_results, false);
   nh_private_.getParam("n_levels", n_levels);
+
+  // Log
+  cout << "  files_path       = " << files_path << endl;
+  cout << "  ref_path         = " << ref_path << endl;
+  cout << "  img_dir          = " << img_dir << endl;
+  cout << "  desc_type        = " << desc_type << endl;
+  cout << "  desc_thresh      = " << desc_thresh << endl;
+  cout << "  best_n           = " << best_n << endl;
+  cout << "  proj_num         = " << proj_num << endl;
+  cout << "  proj_orthogonal  = " << proj_orthogonal << endl;
+  cout << "  plot_results     = " << plot_results << endl;
+  cout << "  n_levels         = " << n_levels << endl;
 
   // Files path sanity check
   if (files_path[files_path.length()-1] != '/')
