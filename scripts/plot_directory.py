@@ -13,16 +13,6 @@ class Error(Exception):
   pass
 
 
-def normalize_vector(v):
-  """ Normalizes the vector v """
-  v_max = np.amax(v)
-  if v_max == 0.0:
-    return v
-
-  v_n = v/np.amax(v);
-  return v_n
-
-
 def calc_match_percentage(h, matches, thresh, size):
   """ Compute the match percentage per hash """
   
@@ -42,7 +32,7 @@ def calc_match_percentage(h, matches, thresh, size):
       sum_g_matches = sum_g_matches + 1
 
     # Reset the counter if needed
-    if (c >= args.size):
+    if (c >= size):
       matches_percentage.append(100*sum_g_matches/sum_c_matches)
       sum_c_matches = 0
       sum_g_matches = 0
@@ -54,6 +44,27 @@ def calc_match_percentage(h, matches, thresh, size):
 
   # Convert to numpy and return
   return np.array(matches_percentage)
+
+
+def calc_match_mean(h, matches, thresh, size):
+  """ Compute the match mean per hash """
+  
+  # Sort the hash
+  idx = np.argsort(h)
+  h = h[idx]
+  matches = matches[idx]
+
+  matches_mean = []
+  for i in range(len(matches)):
+    end = i*size+size
+    if (end > len(matches)-1):
+      end = len(matches)-1
+    matches_mean.append(np.mean(matches[i*size: end]))
+
+  # Convert to numpy and return
+  matches_mean = np.array(matches_mean)
+  matches_mean = matches_mean[~np.isnan(matches_mean)]
+  return matches_mean[0:-1]
 
 
 def get_axes(x, y):
@@ -109,14 +120,13 @@ if __name__ == "__main__":
       h3 = np.concatenate([h3, data[:,3]])
 
   # Compute the matches percentage
-  mp_1 = calc_match_percentage(h1, matches, args.thresh, args.size)
-  mp_2 = calc_match_percentage(h2, matches, args.thresh, args.size)
-  mp_3 = calc_match_percentage(h3, matches, args.thresh, args.size)
+  mp_1 = calc_match_mean(h1, matches, args.thresh, args.size)
+  mp_2 = calc_match_mean(h2, matches, args.thresh, args.size)
+  mp_3 = calc_match_mean(h3, matches, args.thresh, args.size)
 
   # Generate the histogram bins
   bins = np.arange(0, len(matches), args.size);
   center = (bins[:-1] + bins[1:]) / 2
-
   x1, y1 = get_axes(center, mp_1)
   x2, y2 = get_axes(center, mp_2)
   x3, y3 = get_axes(center, mp_3)
@@ -151,23 +161,34 @@ if __name__ == "__main__":
   # Figure
   f2, (ax21, ax22, ax23) = plt.subplots(1, 3, sharey=True)
 
+  # Setup figure
+  xmin = 0
+  if (len(mp_1) > 250):
+    xmin = -10
+  title = "Success percentage (%)"
+  if (np.amax(mp_1)>=100):
+    title = "Mean feat. matching"
+
   # Hash 1
   ax21.bar(x1, y1, align='center', width=w1)
-  ax21.set_title(str(len(matches)) + " Samples (Hash Hyperplanes)")
+  ax21.set_title(str(len(matches)) + " Samples (Hyperplanes)")
   ax21.set_xlabel("Hash Matching")
-  ax21.set_ylabel("Success percentage (%)")
+  ax21.set_ylabel(title)
+  ax21.set_xlim(xmin, len(mp_1))
   ax21.grid(True)
 
   # Hash 2
   ax22.bar(x2, y2, align='center', width=w2)
-  ax22.set_title(str(len(matches)) + " Samples (Hash Hystogram)")
+  ax22.set_title(str(len(matches)) + " Samples (Hystogram)")
   ax22.set_xlabel("Hash Matching")
+  ax22.set_xlim(xmin, len(mp_2))
   ax22.grid(True)
 
   # Hash 3
   ax23.bar(x3, y3, align='center', width=w3)
-  ax23.set_title(str(len(matches)) + " Samples (Hash Projections)")
+  ax23.set_title(str(len(matches)) + " Samples (Projections)")
   ax23.set_xlabel("Hash Matching")
+  ax23.set_xlim(xmin, len(mp_3))
   ax23.grid(True)
 
   plt.show()
