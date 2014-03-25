@@ -36,11 +36,15 @@ if __name__ == "__main__":
   csv_file = args.csv_file
   data = pylab.loadtxt(csv_file, delimiter=',', usecols=(2,3,4,5,6,7,8,9))
 
+  # Get the indices of the non-reference image
+  images = np.genfromtxt(csv_file, dtype='str', delimiter=',', usecols=(0,1))
+  itm_idx = np.where(images[:,1] != images[0,0])
+
   # Normalize vectors
-  matches = data[:,0]
-  h1 = normalize_vector(data[:,1])
-  h2 = normalize_vector(data[:,2])
-  h3 = normalize_vector(data[:,3])
+  matches = data[itm_idx[0], 0]
+  h1 = normalize_vector(data[itm_idx[0], 1])
+  h2 = normalize_vector(data[itm_idx[0], 2])
+  h3 = normalize_vector(data[itm_idx[0], 3])
 
   # Figure
   f, (ax1, ax2, ax3) = pyplot.subplots(3, sharex=True, sharey=True)

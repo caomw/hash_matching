@@ -113,11 +113,15 @@ if __name__ == "__main__":
   h3 = np.array([])
   for subdir, dirs, files in os.walk(args.dir):
     for file in files:
+      # Detect the reference fiel
+      images = np.genfromtxt(files_dir+file, dtype='str', delimiter=',', usecols=(0,1))
+      itm_idx = np.where(images[:,1] != images[0,0])
+
       data = pylab.loadtxt(files_dir+file, delimiter=',', usecols=(2,3,4,5,6,7,8,9))
-      matches = np.concatenate([matches, data[:,0]])
-      h1 = np.concatenate([h1, data[:,1]])
-      h2 = np.concatenate([h2, data[:,2]])
-      h3 = np.concatenate([h3, data[:,3]])
+      matches = np.concatenate([matches, data[itm_idx[0], 0]])
+      h1 = np.concatenate([h1, data[itm_idx[0], 1]])
+      h2 = np.concatenate([h2, data[itm_idx[0], 2]])
+      h3 = np.concatenate([h3, data[itm_idx[0], 3]])
 
   # Compute the matches percentage
   mp_1 = calc_match_mean(h1, matches, args.thresh, args.size)
@@ -163,32 +167,43 @@ if __name__ == "__main__":
 
   # Setup figure
   xmin = 0
-  if (len(mp_1) > 250):
-    xmin = -10
+  if (len(mp_1) > 150):
+    xmin = -4
   title = "Success percentage (%)"
   if (np.amax(mp_1)>=100):
     title = "Mean feat. matching"
 
   # Hash 1
-  ax21.bar(x1, y1, align='center', width=w1)
-  ax21.set_title(str(len(matches)) + " Samples (Hyperplanes)")
+  barlist1 = ax21.bar(x1, y1, align='center', width=w1)
+  ax21.set_title("Hyperplanes")
   ax21.set_xlabel("Hash Matching")
   ax21.set_ylabel(title)
   ax21.set_xlim(xmin, len(mp_1))
   ax21.grid(True)
+  for i in range(len(barlist1)):
+    barlist1[i].set_color('b')
 
   # Hash 2
-  ax22.bar(x2, y2, align='center', width=w2)
-  ax22.set_title(str(len(matches)) + " Samples (Hystogram)")
+  barlist2 = ax22.bar(x2, y2, align='center', width=w2)
+  ax22.set_title("Hystogram")
   ax22.set_xlabel("Hash Matching")
   ax22.set_xlim(xmin, len(mp_2))
   ax22.grid(True)
+  for i in range(len(barlist2)):
+    barlist2[i].set_color('b')
 
   # Hash 3
-  ax23.bar(x3, y3, align='center', width=w3)
-  ax23.set_title(str(len(matches)) + " Samples (Projections)")
+  barlist3 = ax23.bar(x3, y3, align='center', width=w3)
+  ax23.set_title("Projections")
   ax23.set_xlabel("Hash Matching")
   ax23.set_xlim(xmin, len(mp_3))
   ax23.grid(True)
+  for i in range(len(barlist3)):
+    barlist3[i].set_color('b')
+
+  # Gloabl title
+  files_dir_parts = files_dir.split('/');
+  fig = plt.gcf()
+  fig.suptitle("Dataset: " + files_dir_parts[-2] + " (" + str(len(matches)) + " Samples). Bucket Size: " + str(args.size), fontsize=14)
 
   plt.show()

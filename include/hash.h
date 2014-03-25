@@ -90,6 +90,9 @@ private:
   // Make a vector unit
   vector<float> unit_vector(vector<float> x);
 
+  // Normalize a vector (0-1)
+  vector<float> normalize_vector(vector<float> x);
+
   // Stores parameters
   Params params_;
 

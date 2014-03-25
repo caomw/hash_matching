@@ -171,9 +171,9 @@ hash_matching::HashMatchingBase::HashMatchingBase(
       Mat match_mask;
       ros::WallTime start_time_desc = ros::WallTime::now();
       hash_matching::Utils::crossCheckThresholdMatching(ref_prop.getDesc(), 
-                                                              cur_prop.getDesc(), 
-                                                              desc_thresh, 
-                                                              match_mask, matches);
+                                                        cur_prop.getDesc(), 
+                                                        desc_thresh, 
+                                                        match_mask, matches);
       ros::WallDuration time_desc_matching = ros::WallTime::now() - start_time_desc;
   
       // Compare hashes
@@ -192,7 +192,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
       // Log
       ROS_INFO_STREAM(rawname << " -> (" << (int)matches.size() << "): " <<
                     matching_1 << " | " << matching_2 << " | " << matching_3);
-      output_csv << ref_image_name << "," << rawname << "," << matches.size() <<
+      output_csv << ref_image_name << "," << rawname << "," << (int)matches.size() <<
                     "," << matching_1 << "," << matching_2 << "," << matching_3 <<
                     "," << time_hash_1.toSec() << "," << time_hash_2.toSec() <<
                     "," << time_hash_3.toSec() << "," << time_desc_matching.toSec() << endl;
