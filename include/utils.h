@@ -30,6 +30,14 @@ public:
                                 vector<KeyPoint>& key_points, 
                                 string type)
   {
+    // Check Opponent color space descriptors
+    size_t pos = 0;
+    if ( (pos=type.find("Opponent")) == 0)
+    {
+      pos += string("Opponent").size();
+      type = type.substr(pos);
+    }
+
     initModule_nonfree();
     Ptr<FeatureDetector> cv_detector;
     cv_detector = FeatureDetector::create(type);

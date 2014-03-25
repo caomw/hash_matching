@@ -71,17 +71,17 @@ hash_matching::HashMatchingBase::HashMatchingBase(
 
   // The feature min/max value depends on the type of descriptor
   float features_max_value, features_min_value;
-  if (boost::iequals(desc_type, "sift"))
+  if (boost::iequals(desc_type, "sift") || boost::iequals(desc_type, "opponentsift"))
   {
     features_max_value = 255.0;
     features_min_value = 0.0;
   }
-  else if (boost::iequals(desc_type, "surf"))
+  else if (boost::iequals(desc_type, "surf") || boost::iequals(desc_type, "opponentsurf"))
   {
     features_max_value = 1.0;
     features_min_value = -1.0;
   }
-  else if (boost::iequals(desc_type, "orb"))
+  else if (boost::iequals(desc_type, "orb") || boost::iequals(desc_type, "opponentorb"))
   {
     features_max_value = 1.0;
     features_min_value = 0.0;
@@ -105,6 +105,7 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   hash_params.features_max_value = features_max_value;
   hash_params.features_min_value = features_min_value;
   hash_params.n_levels = n_levels;
+  hash_params.desc_type = desc_type;
   hash_obj.setParams(hash_params);
 
   // Read the template image and extract kp and descriptors
