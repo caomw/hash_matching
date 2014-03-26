@@ -368,13 +368,12 @@ vector<float> hash_matching::Hash::getHash3(Mat desc)
       {
         desc_sum += r_[i][m]*desc.at<float>(m, n);
       }
-      hash[k] = desc_sum;
+      hash[k] = desc_sum/(float)desc.rows;
       k++;
     }
   }
 
-  // Normalize hash
-  return normalize_vector(hash);
+  return hash;
 }
 
 void hash_matching::Hash::initProjections(int desc_size, bool orthogonal)
@@ -385,7 +384,7 @@ void hash_matching::Hash::initProjections(int desc_size, bool orthogonal)
 
   // The size of the descriptors may vary... We multiply the current descriptor size 
   // for a escalar to handle the larger cases.
-  int v_size = 6*desc_size;
+  int v_size = 11*desc_size;
 
   if (orthogonal)
   {
@@ -471,20 +470,6 @@ vector<float> hash_matching::Hash::unit_vector(vector<float> x)
   // x^ = x/|x|
   for (uint i=0; i<x.size(); i++)
     x[i] = x[i] / x_norm;
-
-  return x;
-}
-
-// Normalize vector
-vector<float> hash_matching::Hash::normalize_vector(vector<float> x)
-{
-  // Get the maximum and minimum values
-  float min = *min_element(x.begin(), x.end());
-  float max = *max_element(x.begin(), x.end());
-
-  // Normalize
-  for (uint i=0; i<x.size(); i++)
-    x[i] = (x[i]-min)/(max-min);
 
   return x;
 }
