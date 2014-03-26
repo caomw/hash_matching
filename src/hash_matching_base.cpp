@@ -86,6 +86,11 @@ hash_matching::HashMatchingBase::HashMatchingBase(
     features_max_value = 1.0;
     features_min_value = 0.0;
   }
+  else if (boost::iequals(desc_type, "brisk") || boost::iequals(desc_type, "opponentbrisk"))
+  {
+    features_max_value = 1.0;
+    features_min_value = 0.0;
+  }
   else
   {
     ROS_ERROR("[HashMatching: ] Descriptor type must be: SIFT, SURF or ORB!");
@@ -105,7 +110,6 @@ hash_matching::HashMatchingBase::HashMatchingBase(
   hash_params.features_max_value = features_max_value;
   hash_params.features_min_value = features_min_value;
   hash_params.n_levels = n_levels;
-  hash_params.desc_type = desc_type;
   hash_obj.setParams(hash_params);
 
   // Read the template image and extract kp and descriptors

@@ -14,8 +14,7 @@ hash_matching::Hash::Params::Params() :
   proj_num(DEFAULT_PROJ_NUM),
   features_max_value(DEFAULT_F_MAX_VALUE),
   features_min_value(DEFAULT_F_MIN_VALUE),
-  n_levels(DEFAULT_n_levels),
-  desc_type("SIFT")
+  n_levels(DEFAULT_n_levels)
 {}
 
 // Hash constructor
@@ -372,12 +371,6 @@ vector<float> hash_matching::Hash::getHash3(Mat desc)
       hash[k] = desc_sum;
       k++;
     }
-  }
-
-  // Normalize vector for surf descriptors
-  if (boost::iequals(params_.desc_type, "surf") || boost::iequals(params_.desc_type, "opponentsurf"))
-  {
-    hash = normalize_vector(hash);
   }
 
   // Normalize hash

@@ -33,7 +33,6 @@ public:
     float features_max_value;       //!> maximum value for the feature components; for SIFT is 255.
     float features_min_value;       //!> maximum value for the feature components; for SIFT is 0.
     int n_levels;                   //!> number of levels for the feature component value discretization
-    string desc_type;               //!> Descriptor type
 
     // Default values
     static const int              DEFAULT_PROJ_NUM = 5;
