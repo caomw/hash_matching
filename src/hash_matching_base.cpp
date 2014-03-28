@@ -258,7 +258,7 @@ float hash_matching::HashMatchingBase::match(vector<float> hash_1, vector<float>
   float sum = 0.0;
   for (uint i=0; i<hash_1.size(); i++)
     sum += fabs(hash_1[i] - hash_2[i]);
-
+  
   return sum;
 }
 uint hash_matching::HashMatchingBase::match(vector<uint> hash_1, vector<uint> hash_2)
