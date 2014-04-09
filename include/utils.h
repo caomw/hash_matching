@@ -170,6 +170,16 @@ public:
     crossCheckFilter(query_to_train_matches, train_to_query_matches, matches);
   }
 
+  /** \brief Sort 2 pairs by size
+    * @return true if pair 1 is smaller than pair 2
+    * \param pair 1
+    * \param pair 2
+    */
+  static bool sortByDistance(const pair<string, float> d1, const pair<string, float> d2)
+  {
+    return (d1.second < d2.second);
+  }
+
   /** \brief Sort 2 trios by hash hash_matching
     * @return true if hash_matching field of trio 1 is smaller than trio 2
     * \param trio 1

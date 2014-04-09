@@ -30,3 +30,10 @@ add_executable(hash_matching
 			   src/stereo_properties.cpp
 			   src/hash.cpp)
 target_link_libraries(hash_matching ${Boost_LIBRARIES} ${Eigen_LIBRARIES} ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
+
+add_executable(hash_matching_test 
+			   src/test_node.cpp
+			   src/test_base.cpp
+			   src/stereo_properties.cpp
+			   src/hash.cpp)
+target_link_libraries(hash_matching_test ${Boost_LIBRARIES} ${Eigen_LIBRARIES} ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})

@@ -33,15 +33,12 @@ if __name__ == "__main__":
           help='Directory where the user has saved several output files of the hash_matching node.')
   parser.add_argument('-s', '--size', type=int, default=20, 
           help='How many images per bucket.')
-  parser.add_argument('-t', '--thresh', type=int, default=600, 
-          help='The matching threshold to considerate an image as a success or not.')
   
   args = parser.parse_args()
 
   # Log
   print "Directory: ", args.dir
   print "Bucket Size: ", args.size
-  print "Descriptor Matching Threshold: ", args.thresh
   
   files_dir = args.dir
   if (files_dir[-1] != "/"):
@@ -55,10 +52,14 @@ if __name__ == "__main__":
   time_h3 = []
   for subdir, dirs, files in os.walk(args.dir):
     for file in files:
+      # Detect the reference field
+      images = np.genfromtxt(files_dir+file, dtype='str', delimiter=',', usecols=(0,1))
+      itm_idx = np.where(images[:,1] != images[0,0])
+
       # Read the file
       data = pylab.loadtxt(files_dir+file, delimiter=',', usecols=(2,3,4,5,6,7,8,9))
-      matches = data[:,0]
-      h = data[:,3]
+      matches = data[itm_idx[0],0]
+      h = data[itm_idx[0],3]
 
       # Get the number of projections
       file_parts = file.split('_');

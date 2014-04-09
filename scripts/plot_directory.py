@@ -113,7 +113,7 @@ if __name__ == "__main__":
   h3 = np.array([])
   for subdir, dirs, files in os.walk(args.dir):
     for file in files:
-      # Detect the reference fiel
+      # Detect the reference field
       images = np.genfromtxt(files_dir+file, dtype='str', delimiter=',', usecols=(0,1))
       itm_idx = np.where(images[:,1] != images[0,0])
 
