@@ -11,7 +11,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include "test_base.h"
-#include "stereo_properties.h"
 #include "hash.h"
 
 namespace fs=boost::filesystem;
@@ -22,8 +21,8 @@ hash_matching::TestBase::TestBase(
   // Load parameters
   string img_dir, desc_type, files_path, gt_file;
   double desc_thresh, max_avg_err;
-  bool proj_orthogonal;
-  int proj_num, best_n, min_features, gt_tolerance;
+  bool proj_orthogonal, validate;
+  int proj_num, min_neighbour, n_levels, min_matches, min_inliers, gt_tolerance;
   nh_private_.param("files_path", files_path, std::string(""));
   nh_private_.param("img_dir", img_dir, std::string(""));
   nh_private_.param("gt_file", gt_file, std::string(""));
@@ -31,9 +30,12 @@ hash_matching::TestBase::TestBase(
   nh_private_.getParam("desc_thresh", desc_thresh);
   nh_private_.getParam("proj_num", proj_num);
   nh_private_.param("proj_orthogonal", proj_orthogonal, true);
-  nh_private_.getParam("best_n", best_n);
-  nh_private_.getParam("min_features", min_features);
+  nh_private_.getParam("min_neighbour", min_neighbour);
+  nh_private_.getParam("n_levels", n_levels);
+  nh_private_.getParam("min_matches", min_matches);
+  nh_private_.getParam("min_inliers", min_inliers);
   nh_private_.getParam("max_avg_err", max_avg_err);
+  nh_private_.param("validate", validate, false);
   nh_private_.getParam("gt_tolerance", gt_tolerance);
 
   // Log
@@ -43,9 +45,12 @@ hash_matching::TestBase::TestBase(
   cout << "  desc_thresh      = " << desc_thresh << endl;
   cout << "  proj_num         = " << proj_num << endl;
   cout << "  proj_orthogonal  = " << proj_orthogonal << endl;
-  cout << "  best_n           = " << best_n << endl;
-  cout << "  min_features     = " << min_features << endl;
+  cout << "  min_neighbour    = " << min_neighbour << endl;
+  cout << "  n_levels         = " << n_levels << endl;
+  cout << "  min_matches      = " << min_matches << endl;
+  cout << "  min_inliers      = " << min_inliers << endl;
   cout << "  max_avg_err      = " << max_avg_err << endl;
+  cout << "  validate         = " << validate << endl;
   cout << "  gt_tolerance     = " << gt_tolerance << endl;
 
   // Files path sanity check
@@ -170,15 +175,6 @@ hash_matching::TestBase::TestBase(
       string rawname = getImageIdx(filename);
       int ref_img_idx = boost::lexical_cast<int>(rawname);
 
-      /*
-      // Check if even
-      int img_idx = boost::lexical_cast<int>(rawname);
-      if (img_idx % 2 == 0) {
-        it++;
-        continue;
-      }
-      */
-
       // Read image
       string path = img_dir + "/" + filename;
       Mat img_ref = imread(path, CV_LOAD_IMAGE_COLOR);
@@ -191,107 +187,94 @@ hash_matching::TestBase::TestBase(
         first = false;
       }
 
-      // Hash
+      // Ge the hash for this image
       vector<float> ref_hash = hash_obj.getHash3(ref_prop.getDesc());
 
       // Save into table
       res_table.push_back(make_pair(filename, ref_hash));
 
-      if (res_table.size() > 10)
+      // Check if table is big enough
+      if (res_table.size() <= min_neighbour)
       {
-        vector< pair<string,float> > matchings;
-        for (uint k=0; k<res_table.size()-10; k++)
+        it++;
+        continue;
+      }
+
+      // Compute the hash matchings for this image with all other sequence
+      vector< pair<string,float> > matchings;
+      for (uint k=0; k<res_table.size()-min_neighbour; k++)
+      {
+        // Hash matching
+        vector<float> cur_hash = res_table[k].second;
+        float m = match(ref_hash, cur_hash);
+        matchings.push_back(make_pair(res_table[k].first, m));
+      }
+
+      // Sort the hash matchings
+      sort(matchings.begin(), matchings.end(), hash_matching::Utils::sortByDistance);
+
+      // Check for loop closure
+      int best_m=0;
+      int matches = 0;
+      int inliers = 0;
+      double avg_err = 0.0;
+      bool valid = false;
+      while (best_m<n_levels)
+      {
+        // Get the candidate image and compute the descriptors
+        if(best_m >= matchings.size())
         {
-          // Hash matching
-          vector<float> cur_hash = res_table[k].second;
-          float m = match(ref_hash, cur_hash);
-          matchings.push_back(make_pair(res_table[k].first, m));
+          best_m = 0;
+          break;
         }
 
-        // Sort the hash matchings
-        sort(matchings.begin(), matchings.end(), hash_matching::Utils::sortByDistance);
-        int get_n = best_n;
-        if (get_n > (int)matchings.size()) get_n = (int)matchings.size();
+        // Loop-closure?
+        valid = loopClosure(ref_prop, cur_prop, img_dir+"/"+matchings[best_m].first, desc_thresh, min_matches, min_inliers, max_avg_err, matches, inliers, avg_err);
+        if (valid && !validate) break;
 
-        // Check the best n coincidences
-        int matches_size = 0;
-        int inliers = 0;
-        int valid = 0;
-        int best_idx = 0;
-        double avg_err = 99.9;
-        for (int n=0; n<get_n; n++)
+        // Validate the loop closure?
+        if (valid && validate)
         {
-          // Get the best matching image
-          string tmp_path = img_dir + "/" + matchings[n].first;
-          Mat tmp_img = imread(tmp_path, CV_LOAD_IMAGE_COLOR);
-          cur_prop.setImage(tmp_img);
+          // Initialize validation
+          bool validate_valid = false;
 
-          // Crosscheck matching
-          vector<DMatch> matches;
-          Mat match_mask;
-          hash_matching::Utils::crossCheckThresholdMatching(ref_prop.getDesc(), 
-                                                            cur_prop.getDesc(), 
-                                                            desc_thresh, 
-                                                            match_mask, matches);
-          int matches_size_tmp = (int)matches.size();
+          // Loop closure for the previous image 
+          int prev_img_idx = boost::lexical_cast<int>(getImageIdx(matchings[best_m].first)) - 1;
+          string prev_img_file = buildImageName(prev_img_idx, matchings[best_m].first);
+          string tmp_path = img_dir + "/" + prev_img_file;
+          if(fs::exists(tmp_path))
+            validate_valid = loopClosure(ref_prop, cur_prop, img_dir+"/"+prev_img_file, desc_thresh, min_matches, min_inliers, max_avg_err, matches, inliers, avg_err);
 
-          // Check epipolar geometry
-          if (matches_size_tmp >= min_features)
+          ROS_INFO_STREAM("VALIDATING PREV: " << validate_valid);
+          if (!validate_valid)
           {
-            // Get the descriptors
-            vector<KeyPoint> ref_kp = ref_prop.getKp();
-            vector<KeyPoint> cur_kp = cur_prop.getKp();
-
-            // Get the matched points
-            vector<Point2f> ref_points;
-            vector<Point2f> cur_points;
-            for(int i=0; i<matches_size_tmp; i++)
-            {
-              ref_points.push_back(ref_kp[matches[i].queryIdx].pt);
-              cur_points.push_back(cur_kp[matches[i].trainIdx].pt);
-            }
-
-            Mat status;
-            Mat F = findFundamentalMat(ref_points, cur_points, FM_RANSAC, 1, 0.999, status);
-
-            // Fundamental matrix quality check (line 260 of https://code.ros.org/trac/opencv/browser/trunk/opencv/samples/c/stereo_calib.cpp?rev=2614)
-            vector<Vec3f> lines1, lines2;
-            computeCorrespondEpilines(ref_points, 1, F, lines1);
-            computeCorrespondEpilines(cur_points, 2, F, lines2);
-            double avg_err_tmp = 0.0;
-            for(int i=0; i<matches_size_tmp; i++)
-            {
-              double err =  fabs(ref_points[i].x*lines2[i][0] +
-                                 ref_points[i].y*lines2[i][1] + lines2[i][2]) +
-                            fabs(cur_points[i].x*lines1[i][0] +
-                                 cur_points[i].y*lines1[i][1] + lines1[i][2]);
-              avg_err_tmp += err;
-            }
-            avg_err_tmp /= matches_size_tmp;
-
-            // Is the fundamental matrix valid?
-            Scalar tmp = cv::sum(status);
-            int inliers_tmp = (int)tmp[0];
-            Scalar f_sum_parts = cv::sum(F);
-            float f_sum = (float)f_sum_parts[0] + (float)f_sum_parts[1] + (float)f_sum_parts[2];
-
-            // Is this loop closure better?
-            if (f_sum > 1e-3 && inliers_tmp >= min_features && avg_err_tmp < avg_err && avg_err_tmp > 1e-3 && avg_err_tmp < max_avg_err)
-            {
-              avg_err = avg_err_tmp;
-              matches_size = matches_size_tmp;
-              inliers = inliers_tmp;
-              best_idx = n;
-              valid = 1;
-            }
+            // Previous validation does not works, try to validate with the next image
+            int prev_img_idx = boost::lexical_cast<int>(getImageIdx(matchings[best_m].first)) + 1;
+            string prev_img_file = buildImageName(prev_img_idx, matchings[best_m].first);
+            string tmp_path = img_dir + "/" + prev_img_file;
+            if(fs::exists(tmp_path))
+              validate_valid = loopClosure(ref_prop, cur_prop, img_dir+"/"+prev_img_file, desc_thresh, min_matches, min_inliers, max_avg_err, matches, inliers, avg_err);
+            ROS_INFO_STREAM("VALIDATING NEXT: " << validate_valid);
           }
+
+          // If validation, exit. If not, mark as non-valid
+          if (validate_valid)
+            break;
+          else
+            valid = false;
         }
 
-        // Update total loop closures
-        if (valid) found_lc++;
+        best_m++;
+      }
 
-        // Check ground truth
-        int cur_img_idx = boost::lexical_cast<int>(getImageIdx(matchings[best_idx].first));
+      // Check ground truth
+      int tp = 0;
+      int fa = 0;
+      if (valid)
+      {
+        found_lc++;
+
+        int cur_img_idx = boost::lexical_cast<int>(getImageIdx(matchings[best_m].first));
         int gt_valid = 0;
         for (int i=0; i<2*gt_tolerance+1; i++)
         {
@@ -300,23 +283,23 @@ hash_matching::TestBase::TestBase(
           gt_valid += gt[ref_img_idx][idx];
         }
         
-        int tp = 0;
-        int fa = 0;
-        if(valid && gt_valid >= 1)
+        if(gt_valid >= 1)
         {
           true_positives++;
           tp = 1;
         }
-        if(valid && gt_valid == 0)
+        if(gt_valid == 0)
         {
           false_alarm++;
           fa = 1;
         }
+      }
 
-        // Log
-        ROS_INFO_STREAM( rawname << " cl with " << getImageIdx(matchings[best_idx].first) << ": " << valid << " (" << inliers << "/" << matches_size << "/" << avg_err << "/" << matchings[best_idx].second <<"). " << tp << "|" << fa);
-        output_csv << rawname << "," << getImageIdx(matchings[best_idx].first) << "," << valid << "," << inliers << "," << matches_size << endl;
-      } 
+      // Log
+      if(best_m >= matchings.size()) best_m = 0;
+      ROS_INFO_STREAM( rawname << " cl with " << getImageIdx(matchings[best_m].first) << ": " << valid << " (" << matches << "/" << inliers << "/" << avg_err << "). " << tp << "|" << fa);
+      output_csv << rawname << "," << getImageIdx(matchings[best_m].first) << "," << valid << "," << matches << "," << inliers << "," << avg_err << endl;
+
     }
     // Next directory entry
     it++;
@@ -367,4 +350,110 @@ string hash_matching::TestBase::getImageIdx(string filename)
   int point_idx = filename.find_last_of(".");
   int bar_idx = filename.find_last_of("_");
   return filename.substr(bar_idx+1, point_idx-bar_idx-1);
+}
+
+string hash_matching::TestBase::buildImageName(int img_idx, string filename_template)
+{
+  int point_idx = filename_template.find_last_of(".");
+  int bar_idx = filename_template.find_last_of("_");
+  string start = filename_template.substr(0, bar_idx+1);
+
+  stringstream ss;
+  ss << setw(6) << setfill('0') << img_idx;
+  string s = start + ss.str() + filename_template.substr(point_idx, 4);
+  return s;
+}
+
+// True if images close loop
+bool hash_matching::TestBase::loopClosure(StereoProperties ref_prop, 
+                                          StereoProperties cur_prop, 
+                                          string cur_filename,
+                                          double desc_thresh, 
+                                          int min_matches, 
+                                          int min_inliers,
+                                          double max_avg_err,
+                                          int &matches,
+                                          int &inliers,
+                                          double &avg_err)
+{
+  // Initialize outputs
+  matches = 0;
+  inliers = 0;
+  avg_err = 0.0;
+
+  // Get the image and compute descriptors
+  Mat tmp_img = imread(cur_filename, CV_LOAD_IMAGE_COLOR);
+  cur_prop.setImage(tmp_img);
+
+  // Descriptors crosscheck matching
+  vector<DMatch> desc_matches;
+  Mat match_mask;
+  hash_matching::Utils::crossCheckThresholdMatching(ref_prop.getDesc(), 
+                                                    cur_prop.getDesc(), 
+                                                    desc_thresh, 
+                                                    match_mask, desc_matches);
+  matches = (int)desc_matches.size();
+
+  // Check matches size
+  if (matches < min_matches)
+    return false;
+
+  // Get the matched keypoints
+  vector<KeyPoint> ref_kp = ref_prop.getKp();
+  vector<KeyPoint> cur_kp = cur_prop.getKp();
+  vector<Point2f> ref_points;
+  vector<Point2f> cur_points;
+  for(int i=0; i<matches; i++)
+  {
+    ref_points.push_back(ref_kp[desc_matches[i].queryIdx].pt);
+    cur_points.push_back(cur_kp[desc_matches[i].trainIdx].pt);
+  }
+
+  // Check the epipolar geometry
+  Mat status;
+  Mat F = findFundamentalMat(ref_points, cur_points, FM_RANSAC, 1, 0.999, status);
+
+  // Is the fundamental matrix valid?
+  Scalar f_sum_parts = cv::sum(F);
+  float f_sum = (float)f_sum_parts[0] + (float)f_sum_parts[1] + (float)f_sum_parts[2];
+  if (f_sum < 1e-3)
+    return false;
+
+  // Check inliers size
+  inliers = (int)cv::sum(status)[0];
+  if (inliers < min_inliers)
+    return false;
+
+  // Fundamental matrix quality check (line 260 of https://code.ros.org/trac/opencv/browser/trunk/opencv/samples/c/stereo_calib.cpp?rev=2614)
+  // First, select the inliers
+  vector<Point2f> ref_points_in;
+  vector<Point2f> cur_points_in;
+  for(int i=0; i<status.rows; i++)
+  {
+    if((int)status.at<uchar>(0, i) == 1)
+    {
+      ref_points_in.push_back(ref_points[i]);
+      cur_points_in.push_back(cur_points[i]);
+    }
+  }
+  // Second compute the average error
+  vector<Vec3f> lines1, lines2;
+  computeCorrespondEpilines(ref_points_in, 1, F, lines1);
+  computeCorrespondEpilines(cur_points_in, 2, F, lines2);
+  for(int i=0; i<inliers; i++)
+  {
+    double err =  fabs(ref_points_in[i].x*lines2[i][0] +
+                       ref_points_in[i].y*lines2[i][1] + lines2[i][2]) +
+                  fabs(cur_points_in[i].x*lines1[i][0] +
+                       cur_points_in[i].y*lines1[i][1] + lines1[i][2]);
+    avg_err += err;
+  }
+  avg_err /= inliers;
+
+  // Check reprojection error
+  if (avg_err >= max_avg_err)
+    return false;
+
+  // If we arrive here, there is a loop closure.
+  return true;
 }
