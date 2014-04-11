@@ -3,6 +3,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
 #include <iostream>
+#include <numeric>
 #include <stdlib.h>
 #include <fstream>
 #include <sstream>
@@ -20,8 +21,8 @@ hash_matching::TestBase::TestBase(
 {
   // Load parameters
   string img_dir, desc_type, files_path, gt_file;
-  double desc_thresh, max_avg_err;
-  bool proj_orthogonal, validate;
+  double desc_thresh;
+  bool proj_orthogonal, validate, stereo_dataset;
   int proj_num, min_neighbour, n_levels, min_matches, min_inliers, gt_tolerance;
   nh_private_.param("files_path", files_path, std::string(""));
   nh_private_.param("img_dir", img_dir, std::string(""));
@@ -34,8 +35,8 @@ hash_matching::TestBase::TestBase(
   nh_private_.getParam("n_levels", n_levels);
   nh_private_.getParam("min_matches", min_matches);
   nh_private_.getParam("min_inliers", min_inliers);
-  nh_private_.getParam("max_avg_err", max_avg_err);
   nh_private_.param("validate", validate, false);
+  nh_private_.param("stereo_dataset", stereo_dataset, false);
   nh_private_.getParam("gt_tolerance", gt_tolerance);
 
   // Log
@@ -49,8 +50,8 @@ hash_matching::TestBase::TestBase(
   cout << "  n_levels         = " << n_levels << endl;
   cout << "  min_matches      = " << min_matches << endl;
   cout << "  min_inliers      = " << min_inliers << endl;
-  cout << "  max_avg_err      = " << max_avg_err << endl;
   cout << "  validate         = " << validate << endl;
+  cout << "  stereo_dataset   = " << stereo_dataset << endl;
   cout << "  gt_tolerance     = " << gt_tolerance << endl;
 
   // Files path sanity check
@@ -62,7 +63,6 @@ hash_matching::TestBase::TestBase(
   {
     ROS_ERROR_STREAM("[HashMatching:] The image directory does not exists: " << 
                      img_dir);
-    return;
   }
 
   // The feature min/max value depends on the type of descriptor
@@ -89,15 +89,14 @@ hash_matching::TestBase::TestBase(
   }
   else
   {
-    ROS_ERROR("[HashMatching: ] Descriptor type must be: SIFT, SURF or ORB!");
+    ROS_ERROR("[HashMatching:] Descriptor type must be: SIFT, SURF or ORB!");
   }
 
   // Initialize image properties
-  StereoProperties ref_prop, cur_prop;
+  StereoProperties ref_prop;
   hash_matching::StereoProperties::Params image_params;
   image_params.desc_type = desc_type;
   ref_prop.setParams(image_params);
-  cur_prop.setParams(image_params);
 
   // Initialize hash
   Hash hash_obj;
@@ -126,7 +125,8 @@ hash_matching::TestBase::TestBase(
   vec::const_iterator it(v.begin());
 
   // Read the ground truth file
-  vector< vector<int> > gt;
+  int total_lc = 0;
+  vector< vector<int> > ground_truth;
   ifstream in(gt_file.c_str());
   if (!in) ROS_ERROR("[HashMatching: ] Ground truth file does not exist.");
   for (int x=0; x<(int)v.size(); x++) 
@@ -138,33 +138,34 @@ hash_matching::TestBase::TestBase(
       in >> num;
       row.push_back(num);
     }
-    gt.push_back(row);
+    ground_truth.push_back(row);
+    int sum_of_elems = accumulate(row.begin(),row.end(),0);
+    if (sum_of_elems > 0)
+      total_lc++;
   }
   in.close();
 
-  // Count the number of total loops.
-  int total_lc = 0;
-  for (int x=0; x<(int)v.size(); x++) 
-  {
-    for (int y=0; y<(int)v.size(); y++)
-    {
-      if (gt[x][y] == 1)
-      {
-        total_lc++;
-        break;
-      }
-    }
-  }
-  ROS_INFO_STREAM("TOTAL #LC: " << total_lc);
+  // Create the directory to store the keypoints and descriptors
+  string ex_folder = img_dir+"/ex";
+  if (fs::is_directory(ex_folder))
+    fs::remove_all(ex_folder);
+  fs::path dir(ex_folder);
+  if (!fs::create_directory(dir))
+    ROS_ERROR("[HashMatching:] Impossible to create the execution directory.");
 
   // Count the overall loop time
   ros::WallTime overall_time_start = ros::WallTime::now();
+
+  // For stereo datasets, gt_tolerance must be twice the gt_tolerance
+  if (stereo_dataset)
+    gt_tolerance = 2*gt_tolerance;
   
   // Iterate over all images
   bool first = true;
   int found_lc = 0;
   int true_positives = 0;
-  int false_alarm = 0;
+  int false_positives = 0;
+  int gt_offset = 0;
   while (it!=v.end())
   {
     // Check if the directory entry is an directory.
@@ -173,16 +174,36 @@ hash_matching::TestBase::TestBase(
       // Get filename
       string filename = it->filename().string();
       string rawname = getImageIdx(filename);
-      int ref_img_idx = boost::lexical_cast<int>(rawname);
+
+      // For the stereo dataset, process only left images
+      if (stereo_dataset)
+      {
+        if (boost::lexical_cast<int>(rawname) % 2 == 0) {
+          it++;
+          continue;
+        }
+      }
 
       // Read image
-      string path = img_dir + "/" + filename;
+      string path = img_dir+"/"+filename;
       Mat img_ref = imread(path, CV_LOAD_IMAGE_COLOR);
       ref_prop.setImage(img_ref);
+      vector<Point2f> ref_points;
+      for(int i=0; i<ref_prop.getKp().size(); i++)
+        ref_points.push_back(ref_prop.getKp()[i].pt);
+
+      // Save kp and descriptors
+      FileStorage fs(ex_folder+"/"+rawname+".yml", FileStorage::WRITE);
+      write(fs, "kp", ref_points);
+      write(fs, "desc", ref_prop.getDesc());
+      fs.release();
 
       // For the first image initialize the hash object
       if(first)
       {
+        if (boost::lexical_cast<int>(rawname) == 1)
+          gt_offset = 1;
+        ROS_INFO_STREAM("[HashMatching:] GT Offset: " << gt_offset);
         hash_obj.init(ref_prop.getDesc(), proj_orthogonal);
         first = false;
       }
@@ -217,7 +238,6 @@ hash_matching::TestBase::TestBase(
       int best_m=0;
       int matches = 0;
       int inliers = 0;
-      double avg_err = 0.0;
       bool valid = false;
       while (best_m<n_levels)
       {
@@ -229,7 +249,10 @@ hash_matching::TestBase::TestBase(
         }
 
         // Loop-closure?
-        valid = loopClosure(ref_prop, cur_prop, img_dir+"/"+matchings[best_m].first, desc_thresh, min_matches, min_inliers, max_avg_err, matches, inliers, avg_err);
+        stringstream ss;
+        int img_idx = boost::lexical_cast<int>(getImageIdx(matchings[best_m].first));
+        ss << setw(rawname.size()) << setfill('0') << img_idx;
+        valid = loopClosure(ref_prop, ex_folder+"/"+ss.str()+".yml", desc_thresh, min_matches, min_inliers, matches, inliers);
         if (valid && !validate) break;
 
         // Validate the loop closure?
@@ -237,24 +260,25 @@ hash_matching::TestBase::TestBase(
         {
           // Initialize validation
           bool validate_valid = false;
+          int matches_val, inliers_val;
+
+          int off_stereo = 0;
+          if (stereo_dataset)
+            off_stereo = 1;
 
           // Loop closure for the previous image 
-          int prev_img_idx = boost::lexical_cast<int>(getImageIdx(matchings[best_m].first)) - 1;
-          string prev_img_file = buildImageName(prev_img_idx, matchings[best_m].first);
-          string tmp_path = img_dir + "/" + prev_img_file;
-          if(fs::exists(tmp_path))
-            validate_valid = loopClosure(ref_prop, cur_prop, img_dir+"/"+prev_img_file, desc_thresh, min_matches, min_inliers, max_avg_err, matches, inliers, avg_err);
+          stringstream ss;
+          int prev_img_idx = img_idx - 1 - off_stereo;
+          ss << setw(rawname.size()) << setfill('0') << prev_img_idx;
+          validate_valid = loopClosure(ref_prop, ex_folder+"/"+ss.str()+".yml", desc_thresh, min_matches, min_inliers, matches_val, inliers_val);
 
-          ROS_INFO_STREAM("VALIDATING PREV: " << validate_valid);
           if (!validate_valid)
           {
             // Previous validation does not works, try to validate with the next image
-            int prev_img_idx = boost::lexical_cast<int>(getImageIdx(matchings[best_m].first)) + 1;
-            string prev_img_file = buildImageName(prev_img_idx, matchings[best_m].first);
-            string tmp_path = img_dir + "/" + prev_img_file;
-            if(fs::exists(tmp_path))
-              validate_valid = loopClosure(ref_prop, cur_prop, img_dir+"/"+prev_img_file, desc_thresh, min_matches, min_inliers, max_avg_err, matches, inliers, avg_err);
-            ROS_INFO_STREAM("VALIDATING NEXT: " << validate_valid);
+            stringstream ss;
+            int next_img_idx = img_idx + 1 + off_stereo;
+            ss << setw(rawname.size()) << setfill('0') << next_img_idx;
+            validate_valid = loopClosure(ref_prop, ex_folder+"/"+ss.str()+".yml", desc_thresh, min_matches, min_inliers, matches_val, inliers_val);
           }
 
           // If validation, exit. If not, mark as non-valid
@@ -280,7 +304,7 @@ hash_matching::TestBase::TestBase(
         {
           int idx = cur_img_idx - gt_tolerance + i;
           if (idx<0) idx = 0;
-          gt_valid += gt[ref_img_idx][idx];
+          gt_valid += ground_truth[boost::lexical_cast<int>(rawname) - gt_offset][idx];
         }
         
         if(gt_valid >= 1)
@@ -290,27 +314,40 @@ hash_matching::TestBase::TestBase(
         }
         if(gt_valid == 0)
         {
-          false_alarm++;
+          false_positives++;
           fa = 1;
         }
       }
 
       // Log
       if(best_m >= matchings.size()) best_m = 0;
-      ROS_INFO_STREAM( rawname << " cl with " << getImageIdx(matchings[best_m].first) << ": " << valid << " (" << matches << "/" << inliers << "/" << avg_err << "). " << tp << "|" << fa);
-      output_csv << rawname << "," << getImageIdx(matchings[best_m].first) << "," << valid << "," << matches << "," << inliers << "," << avg_err << endl;
+      ROS_INFO_STREAM( rawname << " cl with " << getImageIdx(matchings[best_m].first) << ": " << valid << " (" << matches << "/" << inliers << "). " << tp << "|" << fa);
+      output_csv << rawname << "," << getImageIdx(matchings[best_m].first) << "," << valid << "," << matches << "," << inliers << endl;
 
     }
     // Next directory entry
     it++;
   }
 
-  // Print the overall time
+  // Remove the temporal directory
+  if (fs::is_directory(ex_folder))
+    fs::remove_all(ex_folder);
+
+  // Stop time
   ros::WallDuration overall_time = ros::WallTime::now() - overall_time_start;
+
+  // Compute precision and recall
+  int false_negatives = total_lc - found_lc;
+  double precision = round( 100 * true_positives / (true_positives + false_positives) );
+  double recall = round( 100 * true_positives / (true_positives + false_negatives) );
+
+  // Print the results
   ROS_INFO_STREAM("TOTAL #LC: " << total_lc);
   ROS_INFO_STREAM("FOUND #LC: " << found_lc);
   ROS_INFO_STREAM("#TP: " << true_positives);
-  ROS_INFO_STREAM("#FA: " << false_alarm);
+  ROS_INFO_STREAM("#FP: " << false_positives);
+  ROS_INFO_STREAM("PRECISION: " << precision << "%");
+  ROS_INFO_STREAM("RECALL: " << recall << "%");
   ROS_INFO_STREAM("TOTAL EXECUTION TIME: " << overall_time.toSec() << " sec.");
 
   // Save data into file
@@ -352,44 +389,37 @@ string hash_matching::TestBase::getImageIdx(string filename)
   return filename.substr(bar_idx+1, point_idx-bar_idx-1);
 }
 
-string hash_matching::TestBase::buildImageName(int img_idx, string filename_template)
-{
-  int point_idx = filename_template.find_last_of(".");
-  int bar_idx = filename_template.find_last_of("_");
-  string start = filename_template.substr(0, bar_idx+1);
-
-  stringstream ss;
-  ss << setw(6) << setfill('0') << img_idx;
-  string s = start + ss.str() + filename_template.substr(point_idx, 4);
-  return s;
-}
-
 // True if images close loop
-bool hash_matching::TestBase::loopClosure(StereoProperties ref_prop, 
-                                          StereoProperties cur_prop, 
+bool hash_matching::TestBase::loopClosure(StereoProperties ref_prop,
                                           string cur_filename,
                                           double desc_thresh, 
                                           int min_matches, 
                                           int min_inliers,
-                                          double max_avg_err,
                                           int &matches,
-                                          int &inliers,
-                                          double &avg_err)
+                                          int &inliers)
 {
   // Initialize outputs
   matches = 0;
   inliers = 0;
-  avg_err = 0.0;
 
-  // Get the image and compute descriptors
-  Mat tmp_img = imread(cur_filename, CV_LOAD_IMAGE_COLOR);
-  cur_prop.setImage(tmp_img);
+  // Sanity check
+  if ( !fs::exists(cur_filename) ) return false;
+
+  // Get the image keypooints and descriptors
+  FileStorage fs; 
+  fs.open(cur_filename, FileStorage::READ);
+  if (!fs.isOpened()) ROS_ERROR("[HashMatching:] Failed to open the image keypoints and descriptors.");
+  vector<Point2f> cur_kp;
+  Mat cur_desc;
+  fs["kp"] >> cur_kp;
+  fs["desc"] >> cur_desc;
+  fs.release();
 
   // Descriptors crosscheck matching
   vector<DMatch> desc_matches;
   Mat match_mask;
   hash_matching::Utils::crossCheckThresholdMatching(ref_prop.getDesc(), 
-                                                    cur_prop.getDesc(), 
+                                                    cur_desc, 
                                                     desc_thresh, 
                                                     match_mask, desc_matches);
   matches = (int)desc_matches.size();
@@ -400,13 +430,12 @@ bool hash_matching::TestBase::loopClosure(StereoProperties ref_prop,
 
   // Get the matched keypoints
   vector<KeyPoint> ref_kp = ref_prop.getKp();
-  vector<KeyPoint> cur_kp = cur_prop.getKp();
   vector<Point2f> ref_points;
   vector<Point2f> cur_points;
   for(int i=0; i<matches; i++)
   {
     ref_points.push_back(ref_kp[desc_matches[i].queryIdx].pt);
-    cur_points.push_back(cur_kp[desc_matches[i].trainIdx].pt);
+    cur_points.push_back(cur_kp[desc_matches[i].trainIdx]);
   }
 
   // Check the epipolar geometry
@@ -422,36 +451,6 @@ bool hash_matching::TestBase::loopClosure(StereoProperties ref_prop,
   // Check inliers size
   inliers = (int)cv::sum(status)[0];
   if (inliers < min_inliers)
-    return false;
-
-  // Fundamental matrix quality check (line 260 of https://code.ros.org/trac/opencv/browser/trunk/opencv/samples/c/stereo_calib.cpp?rev=2614)
-  // First, select the inliers
-  vector<Point2f> ref_points_in;
-  vector<Point2f> cur_points_in;
-  for(int i=0; i<status.rows; i++)
-  {
-    if((int)status.at<uchar>(0, i) == 1)
-    {
-      ref_points_in.push_back(ref_points[i]);
-      cur_points_in.push_back(cur_points[i]);
-    }
-  }
-  // Second compute the average error
-  vector<Vec3f> lines1, lines2;
-  computeCorrespondEpilines(ref_points_in, 1, F, lines1);
-  computeCorrespondEpilines(cur_points_in, 2, F, lines2);
-  for(int i=0; i<inliers; i++)
-  {
-    double err =  fabs(ref_points_in[i].x*lines2[i][0] +
-                       ref_points_in[i].y*lines2[i][1] + lines2[i][2]) +
-                  fabs(cur_points_in[i].x*lines1[i][0] +
-                       cur_points_in[i].y*lines1[i][1] + lines1[i][2]);
-    avg_err += err;
-  }
-  avg_err /= inliers;
-
-  // Check reprojection error
-  if (avg_err >= max_avg_err)
     return false;
 
   // If we arrive here, there is a loop closure.
